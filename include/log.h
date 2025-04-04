@@ -16,6 +16,7 @@
 #include <vector>
 #include <ctime>
 #include <atomic>
+#include <mutex>
 #include <sys/stat.h>
 namespace logNameSpace
 {
@@ -43,8 +44,9 @@ namespace logNameSpace
       {
       public:
             funLog() = default;
-            funLog(const std::string name, Log *log);
+            funLog(const std::string &name, Log *log);
             void write(const std::string &msg);
+            void writeln(const std::string &msg);
             void write(std::vector<std::string> &msg);
             funLog &operator<<(const std::string &msg);
             funLog &operator<<(const int &msg);
@@ -56,7 +58,7 @@ namespace logNameSpace
             }
 
       private:
-            std::unique_ptr<Log> funlog;
+            std::shared_ptr<Log> funlog;
             std::string name;
             Log *log;
       };
@@ -64,28 +66,37 @@ namespace logNameSpace
       {
       public:
             Log();
-            Log(const std::string name, int logMaxSize = 1024 * 1024 * 128);
+            Log(const Log &other)
+            {
+                  this->msg = other.msg;
+                  this->logName = other.logName;
+                  this->logMaxSize = other.logMaxSize;
+                  this->writeFlie = std::move(other.writeFlie);
+                  this->funlogList = other.funlogList;
+            }
+            Log(const std::string name, int logMaxSize = 2048);
             ~Log();
             Log *operator=(Log &other);
             Log *operator+(ENDL endl);
             Log &operator=(Log &&other) noexcept;
             void mustChangeFlie();
-            void write(std::string msg);
+            void write(const std::string &msg);
+            void writeln(const std::string &msg);
             void write(std::vector<std::string> &msg);
-            void setName(const std::string name) { this->logName = name; }
-            Log &operator<<(const std::string msg);
+            void setName(const std::string &name) { this->logName = name; }
+            Log &operator<<(const std::string &msg);
             Log &operator<<(const int msg);
             Log &operator<<(ENDL &e)
             {
                   write("\n");
                   return *this;
             }
-            std::shared_ptr<funLog> getFunLog(const std::string name);
+            std::shared_ptr<funLog> getFunLog(const std::string &name);
 
       private:
             std::string msg;
             int logMaxSize = 1024;
-            std::unique_ptr<std::atomic<bool>> writeFlie;
+            std::shared_ptr<std::atomic<bool>> writeFlie;
             const std::string getTime(void) const;
             bool createDirectory(std::string folder);
             std::ofstream logFile;
@@ -99,7 +110,7 @@ namespace logNameSpace
       } endl;
 
       // funLog fun
-      funLog::funLog(const std::string name, Log *log)
+      funLog::funLog(const std::string &name, Log *log)
       {
             funlog = std::unique_ptr<Log>(new Log(name));
             this->name = name;
@@ -114,6 +125,11 @@ namespace logNameSpace
             funlog->write(msg);
             this->log->write(msg);
             return;
+      }
+      void funLog::writeln(const std::string &msg)
+      {
+            funlog->writeln(msg);
+            log->writeln(msg);
       }
       void funLog::write(const std::string &msg)
       {
@@ -197,6 +213,7 @@ namespace logNameSpace
             this->logName = other.logName;
             this->logMaxSize = other.logMaxSize;
             this->writeFlie = std::move(other.writeFlie);
+            this->funlogList = other.funlogList;
             return *this;
       }
       void Log::mustChangeFlie()
@@ -225,7 +242,12 @@ namespace logNameSpace
             }
             logName = temp;
       }
-      void Log::write(std::string msg)
+      void Log::writeln(const std::string &msg)
+      {
+            this->write(msg + "\n");
+            return;
+      }
+      void Log::write(const std::string &msg)
       {
             try
             {
@@ -243,11 +265,7 @@ namespace logNameSpace
 #if __linux__
                   std::ofstream logFilet("/" + logName + "-log/" + logName + ".log", std::ios::out | std::ios::app);
 #endif
-                  while (this->msg.find("\n") != std::string::npos)
-                  {
-                        logFilet << getTime() << " " << this->msg.substr(0, this->msg.find("\n")) << std::endl;
-                        this->msg = this->msg.substr(this->msg.find("\n") + 1);
-                  }
+                  logFilet << getTime() << " " << this->msg;
                   logFilet.close();
             }
             mustChangeFlie();
@@ -262,7 +280,7 @@ namespace logNameSpace
             mustChangeFlie();
             return;
       }
-      Log &Log::operator<<(const std::string msg)
+      Log &Log::operator<<(const std::string &msg)
       {
             while (this->writeFlie->exchange(true, std::memory_order_acquire))
                   ;
@@ -279,7 +297,7 @@ namespace logNameSpace
             return *this;
       }
 
-      std::shared_ptr<funLog> Log::getFunLog(const std::string name)
+      std::shared_ptr<funLog> Log::getFunLog(const std::string &name)
       {
             if (funlogList.find(name) == funlogList.end())
             {

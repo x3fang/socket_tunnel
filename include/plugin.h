@@ -1,149 +1,181 @@
-#ifndef PLUGIN_H
-#define PLUGIN_H
-#define EXPORT __declspec(dllexport)
-#include "definehead.h"
-
-// #include "globaldll.h"
 /*
-run line:
-0: accept socket
-1: serverRS start
-2: server online
-3: server rece data
-4: clientRS start
-5: client oline
-6: client exit
-7: healthyCheack send data
-8: healthyCheack recv data
-9: healthyCheack judge
-10: everyFunction start
-11: everyFunction end
-12: create SEID
+@author: x3fang
 */
-map<string, string> runLineMap = {
-    {"as", "10000000000000000000"},         // accept socket
-    {"sRSstart", "01000000000000000000"},   // serverRS start
-    {"sonline", "00100000000000000000"},    // server online
-    {"srd", "00010000000000000000"},        // server rece data
-    {"cRSstart", "00001000000000000000"},   // clientRS start
-    {"coline", "00000100000000000000"},     // client online
-    {"cexit", "00000010000000000000"},      // client exit
-    {"hCsd", "00000001000000000000"},       // healthyCheack send data
-    {"hCrd", "00000000100000000000"},       // healthyCheack recv data
-    {"hCjudge", "00000000010000000000"},    // healthyCheack judge
-    {"eFstart", "00000000001000000000"},    // everyFunction start
-    {"eFend", "00000000000100000000"},      // evertFunction end
-    {"cSEID", "00000000000010000000"},      // create SEID
-    {"fun", "00000000000000100000"},        // fun plugin
-    {"rFf", "00000000000000010000"},        // run fun failed
-    {"rFs", "00000000000000001000"},        // run fun success
-    {"local", "00000000000000000100"},      // local plugin
-    {"loadData", "00000000000000000010"},   // load data
-    {"funTerminal", "00000000000000000001"} // fun Plugin command-line version
-};
-#define RUN_LINE_NUM 21 // runLineMap.size()+1
-enum RunLine            // 对应的位数(runLineMap) 以便索引此功能在 pluginList 中的位置
+#ifndef clientPlugin_h
+#define clientPlugin_h
+#include <map>
+#include <string>
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#include <locale>
+#include <codecvt>
+#include <queue>
+#include "globalDefine.h"
+namespace PluginNamespace
 {
-      AcceptSocket = 1,
-      ServerRSStart = 2,
-      ServerOnline = 3,
-      ServerRecvData = 4,
-      ClientRSStart = 5,
-      ClientOnline = 6,
-      ClientExit = 7,
-      HealthyCheckSendData = 8,
-      HealthyCheckRecvData = 9,
-      HealthyCheckJudge = 10,
-      EveryFunctionStart = 11,
-      EveryFunctionEnd = 12,
-      CreateSEID = 13,
-      Fun = 14,
-      Log = 15,
-      RunFunFailed = 16,
-      RunFunSuccess = 17,
-      Local = 18,
-      LoadData = 19,
-      FunTerminal = 20
-};
-struct EXPORT pluginStruct
-{
-      bool isStart = false;
-      string funName;
-      void (*startupFun)();
-      void (*startFun)();
-      void (*stopFun)();
-      bool (*runFun)(allInfoStruct *info);
-      map<string, string> (*cmdInfoGet)();
-      pluginStruct(string funName,
-                   void (*startupfunPtr)(),
-                   void (*startfunPtr)(),
-                   void (*stopfunPtr)(),
-                   bool (*runfunPtr)(allInfoStruct *info),
-                   bool isStart = true,
-                   map<string, string> (*cmdInfoGet)() = nullptr)
+      std::vector<std::string> traverseFiles(const std::wstring &rootDir, const std::wstring &compareSuffix);
+      struct pluginInfo
       {
-            this->funName = funName;
-            this->startupFun = startupfunPtr;
-            this->startFun = startfunPtr;
-            this->stopFun = stopfunPtr;
-            this->runFun = runfunPtr;
-            this->isStart = isStart;
-            this->cmdInfoGet = cmdInfoGet;
-      }
-      ~pluginStruct()
+            void *data;
+      };
+      using PluginInfo = Info<pluginInfo>;
+      class pluginBase
       {
-            this->startupFun = nullptr;
-            this->startFun = nullptr;
-            this->stopFun = nullptr;
-            this->runFun = nullptr;
-            this->cmdInfoGet = nullptr;
-      }
-};
-struct EXPORT pluginListStruct
-{
-      std::shared_ptr<pluginListStruct> next;
-      std::shared_ptr<pluginStruct> plugin;
-};
-struct funPluginComdVerNameStruct
-{
-      string funName;
-      std::shared_ptr<pluginListStruct> pluginList;
-      bool operator==(const string &e)
-      {
-            return this->funName==e;
-      }
-};
-vector<std::shared_ptr<pluginListStruct>> pluginList(RUN_LINE_NUM + 2);
-vector<string> pluginNameList;
-vector<string> funPluginNameList;
-vector<funPluginComdVerNameStruct> funPluginComdVerNameList;
-string fileName;
-extern "C"
-{
+      public:
+            pluginBase() = default;
+            ~pluginBase() = default;
+            pluginBase(const pluginBase &other) = delete;
+            pluginBase &operator=(const pluginBase &other) = delete;
+            inline const std::string getAuthor(void) const { return this->author; }
+            inline const std::string getversion(void) const { return this->version; }
+            inline const std::string getpluginName(void) const { return this->pluginName; }
 
-      bool EXPORT registerPlugin(string pluginName,
-                                 string runlineS,
-                                 void (*startupfunPtr)(),
-                                 void (*startfunPtr)(),
-                                 void (*stopfunPtr)(),
-                                 bool (*runfunPtr)(allInfoStruct *),
-                                 bool isStart = true,
-                                 map<string, string> (*cmdInfoGet)() = nullptr);
-      bool EXPORT delPlugin(string pluginName);
-      bool EXPORT findPlugin(string pluginName);
-      bool EXPORT rsetPlugin(string pluginName,
-                             string runlineS,
-                             void (*startupfunPtr)(),
-                             void (*startfunPtr)(),
-                             void (*stopfunPtr)(),
-                             bool (*runfunPtr)(allInfoStruct *),
-                             bool isStart = true,
-                             map<string, string> (*cmdInfoGet)() = nullptr);
-      bool EXPORT startPlugin(string pluginName);
-      // bool EXPORT LogWrite(string logMSG);
-      bool EXPORT stopPlugin(string pluginName);
-      bool EXPORT runPlugin(allInfoStruct &info, string runlineS);
-      bool EXPORT runFun(allInfoStruct *info, string Name);
+            virtual bool runFun(PluginInfo &info) = 0;
+            bool used = false;
+
+      protected:
+            std::string author, version, pluginName;
+      };
+      class PluginManager final : public pluginBase
+      {
+      public:
+            /*
+            this function is used to register plugin
+            */
+            static const std::pair<bool, const std::string> registerFun(pluginBase *plugin)
+            {
+                  if (!plugin)
+                        return std::pair<bool, const std::string>(false, "");
+                  const std::string pluginAuthor = plugin->getAuthor();
+                  const std::string pluginName = plugin->getpluginName();
+                  if (!pluginAuthor.empty() && !pluginName.empty() && !findFun(pluginAuthor)) // not found,register
+                  {
+                        auto res = pluginFunList.insert(std::pair<std::string, pluginBase *>(pluginName, plugin));
+                        if (res.second) // inserted success
+                              return std::pair<bool, const std::string>(true, pluginAuthor);
+                        else
+                              return std::pair<bool, const std::string>(false, pluginAuthor);
+                  }
+                  else // found same name plugin
+                        return std::pair<bool, const std::string>(false, pluginAuthor);
+            }
+            static bool runFun(const std::string &funName, PluginInfo &info)
+            {
+                  if (findFun(funName))
+                        return pluginFunList[funName]->runFun(info);
+                  return false;
+            }
+            inline static bool findFun(const std::string &funName)
+            {
+                  return (pluginFunList.find(funName) != pluginFunList.end());
+            }
+            inline static std::size_t getLoadPluginNum() { return pluginFunList.size(); }
+            PluginManager();
+            ~PluginManager() = default;
+            PluginManager(const PluginManager &other) = delete;
+            PluginManager &operator=(const PluginManager &other) = delete;
+
+      private:
+            static std::map<std::string, pluginBase *> pluginFunList;
+
+      private:
+            bool runFun(PluginInfo &info) override { return true; }
+      };
+      PluginManager::PluginManager()
+      {
+            this->used = true;
+            this->author = "x3fang";
+            this->version = "1.0.0";
+            this->pluginName = "PluginManager";
+      }
+      std::map<std::string, pluginBase *> PluginManager::pluginFunList;
+      using registerFunValue = const std::pair<bool, const std::string> (*)(pluginBase *);
+      typedef bool (*registerFun)(registerFunValue);
+      std::vector<HINSTANCE> pluginDllHandle;
+      int loadPlugin(const std::string &pluginPath)
+      {
+            int res = 0;
+            auto pluginPathVector = traverseFiles(std::wstring(pluginPath.begin(), pluginPath.end()), L"dll");
+            int i = 0;
+            for (auto it = pluginPathVector.begin(); it != pluginPathVector.end(); it++, i++)
+            {
+                  pluginDllHandle[i] = (HINSTANCE)LoadLibrary(it->c_str());
+                  if (pluginDllHandle[i] == NULL)
+                  {
+                        i--;
+                        continue;
+                  }
+                  res++;
+                  ((registerFun)GetProcAddress(pluginDllHandle[i], "registerFun"))(PluginManager::registerFun);
+            }
+            return res;
+      }
+
+      std::vector<std::string> traverseFiles(const std::wstring &rootDir, const std::wstring &compareSuffix)
+      {
+            std::vector<std::string> filePaths;
+            std::queue<std::wstring> dirQueue;
+            dirQueue.push(rootDir);
+
+            WIN32_FIND_DATAW findData;
+            HANDLE hFind;
+
+            // UTF-16 到 UTF-8 转换器
+            std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
+
+            while (!dirQueue.empty())
+            {
+                  std::wstring currentDir = std::move(dirQueue.front());
+                  dirQueue.pop();
+
+                  // 手动构造搜索路径 currentDir\\*
+                  std::wstring searchPath = currentDir;
+                  if (currentDir.back() != L'\\')
+                        searchPath += L'\\';
+                  searchPath += L'*';
+
+                  hFind = FindFirstFileW(searchPath.c_str(), &findData);
+                  if (hFind == INVALID_HANDLE_VALUE)
+                        continue;
+
+                  do
+                  {
+                        // 跳过 "." 和 ".."
+                        if (findData.cFileName[0] == L'.' &&
+                            (findData.cFileName[1] == L'\0' ||
+                             (findData.cFileName[1] == L'.' && findData.cFileName[2] == L'\0')))
+                        {
+                              continue;
+                        }
+
+                        // 手动拼接完整路径
+                        std::wstring fullPath = currentDir;
+                        if (fullPath.back() != L'\\')
+                              fullPath += L'\\';
+                        fullPath += findData.cFileName;
+
+                        if (findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
+                        {
+                              dirQueue.push(fullPath);
+                        }
+                        else if (fullPath.find_last_of(L".") != std::wstring::npos && fullPath.substr(fullPath.find_last_of(L".") + 1) == compareSuffix)
+                        {
+                              // 转换为UTF-8并存入vector
+                              try
+                              {
+                                    filePaths.emplace_back(converter.to_bytes(fullPath));
+                              }
+                              catch (...)
+                              {
+                                    // 忽略编码转换失败的文件
+                              }
+                        }
+                  } while (FindNextFileW(hFind, &findData));
+
+                  FindClose(hFind);
+            }
+
+            return filePaths;
+      }
 }
-#include "plugin.cpp"
 #endif
