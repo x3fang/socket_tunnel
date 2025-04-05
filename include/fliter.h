@@ -54,6 +54,7 @@ public:
       if this ruleType's typeSupportOpt [2~5] set 1,use int to save value else use string
       */
       bool addRuleType(const std::string &ruleTypeName, const std::bitset<optNum> typeSupportOpt);
+      bool addRuleType(const std::string &ruleTypeName, const std::string &typeSupportOpt);
       /*
       if this rule's ruleType's typeSupportOpt [2~5] set 1,use int to save value else use string
       */
@@ -70,6 +71,12 @@ bool Fliter::addRuleType(const std::string &ruleTypeName, const std::bitset<optN
       if (this->findRuleType(ruleTypeName))
             return false;
       return ruleTypeList.insert(std::pair<const std::string, std::pair<bool, std::shared_ptr<ruleNode>>>(ruleTypeName, std::pair<bool, std::shared_ptr<ruleNode>>((typeSupportOpt[2] || typeSupportOpt[3] || typeSupportOpt[4] || typeSupportOpt[5]), std::make_shared<ruleNode>(ruleNode(typeSupportOpt))))).second;
+}
+bool Fliter::addRuleType(const std::string &ruleTypeName, const std::string &typeSupportOpt)
+{
+      if (this->findRuleType(ruleTypeName))
+            return false;
+      return ruleTypeList.insert(std::pair<const std::string, std::pair<bool, std::shared_ptr<ruleNode>>>(ruleTypeName, std::pair<bool, std::shared_ptr<ruleNode>>((typeSupportOpt[2] || typeSupportOpt[3] || typeSupportOpt[4] || typeSupportOpt[5]), std::make_shared<ruleNode>(ruleNode(std::bitset<Fliter::optNum>(typeSupportOpt)))))).second;
 }
 std::string Fliter::addRule(const std::string &ruleTypeName, const int ruleUsedOpt, const std::string &compareValue, bool useRule)
 {
@@ -237,6 +244,6 @@ bool Fliter::matchRule(const std::string &ruleTypeName, const std::string &compa
                   }
             }
       }
-      return false;
+      return true;
 }
 #endif

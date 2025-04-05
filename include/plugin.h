@@ -10,13 +10,14 @@
 #include <locale>
 #include <codecvt>
 #include <queue>
+#include <iostream>
 #include "globalDefine.h"
 namespace PluginNamespace
 {
       std::vector<std::string> traverseFiles(const std::wstring &rootDir, const std::wstring &compareSuffix);
       struct pluginInfo
       {
-            void *data;
+            std::vector<std::shared_ptr<void>> data;
       };
       using PluginInfo = Info<pluginInfo>;
       class pluginBase
@@ -61,9 +62,18 @@ namespace PluginNamespace
             }
             static bool runFun(const std::string &funName, PluginInfo &info)
             {
-                  if (findFun(funName))
+                  if (findFun(funName) && pluginFunList[funName]->used)
                         return pluginFunList[funName]->runFun(info);
                   return false;
+            }
+            static std::vector<std::string> getAllPluginName()
+            {
+                  std::vector<std::string> res;
+                  for (auto &it : pluginFunList)
+                  {
+                        res.push_back(it.first);
+                  }
+                  return res;
             }
             inline static bool findFun(const std::string &funName)
             {
@@ -72,14 +82,20 @@ namespace PluginNamespace
             inline static std::size_t getLoadPluginNum() { return pluginFunList.size(); }
             PluginManager();
             ~PluginManager() = default;
-            PluginManager(const PluginManager &other) = delete;
+            PluginManager(const PluginManager &other)
+            {
+            }
             PluginManager &operator=(const PluginManager &other) = delete;
 
       private:
             static std::map<std::string, pluginBase *> pluginFunList;
 
       private:
-            bool runFun(PluginInfo &info) override { return true; }
+            bool runFun(PluginInfo &info) override
+            {
+                  std::cout << "HELLO,BUG";
+                  return true;
+            }
       };
       PluginManager::PluginManager()
       {
@@ -91,7 +107,7 @@ namespace PluginNamespace
       std::map<std::string, pluginBase *> PluginManager::pluginFunList;
       using registerFunValue = const std::pair<bool, const std::string> (*)(pluginBase *);
       typedef bool (*registerFun)(registerFunValue);
-      std::vector<HINSTANCE> pluginDllHandle;
+      std::vector<HINSTANCE> pluginDllHandle(5, 0);
       int loadPlugin(const std::string &pluginPath)
       {
             int res = 0;
@@ -105,8 +121,13 @@ namespace PluginNamespace
                         i--;
                         continue;
                   }
-                  res++;
-                  ((registerFun)GetProcAddress(pluginDllHandle[i], "registerFun"))(PluginManager::registerFun);
+
+                  auto regFun = ((registerFun)GetProcAddress(pluginDllHandle[i], "registerFun"));
+                  if (regFun)
+                  {
+                        if (regFun(PluginManager::registerFun))
+                              res++;
+                  }
             }
             return res;
       }

@@ -11,7 +11,7 @@
 
 #pragma comment(lib, "ws2_32.lib")
 #endif
-
+#define DEBUG 1
 #include <algorithm>
 #include <cstring>
 #include <string>
@@ -20,13 +20,16 @@
 #include <mutex>
 #include <thread>
 #include <vector>
+#include <iostream>
+#include "log.h"
+#define EXPORT __declspec(dllexport)
 #define SUCCESS_OPERAT 0
+using namespace logNameSpace;
 std::shared_ptr<std::string> connectIp = std::make_shared<std::string>();
 int connectPort;
-
 std::shared_ptr<SOCKET> mainConnectSocket = std::make_shared<SOCKET>();
 std::shared_ptr<SOCKET> healthySocket = std::make_shared<SOCKET>();
-
+Log g_log;
 template <typename T>
 struct Info
 {
@@ -65,25 +68,45 @@ int send(SOCKET &sock, const std::string &data)
 }
 int recv(SOCKET &sock, std::string &data)
 {
-      std::string resData;
-      char buf[1024] = {0};
-      while (true)
+      try
       {
-            int res = recv(sock, buf, 2, 0);
-            if (res == SOCKET_ERROR)
-                  return WSAGetLastError();
-            if (res == 2 && buf[0] == '\r' && buf[2] == '\n')
+            std::string resData;
+            char buf[1024] = {0};
+            while (true)
             {
-                  res = recv(sock, buf, sizeof(buf), 0);
+                  int res = recv(sock, buf, 2, 0);
                   if (res == SOCKET_ERROR)
                         return WSAGetLastError();
-                  resData += std::string(buf, res);
-                  if (resData.find("\r\n") != std::string::npos)
+                  if (res == 2 && strlen(buf) == 2 && buf[0] == '\r' && buf[1] == '\n')
                   {
-                        data = resData.substr(0, resData.find("\r\n"));
-                        return SUCCESS_OPERAT;
+                        char lastch = 0, thisch = 0;
+                        while (lastch != '\r' || thisch != '\n')
+                        {
+                              res = recv(sock, &thisch, 1, 0);
+                              if (res == SOCKET_ERROR)
+                                    return WSAGetLastError();
+                              resData += thisch;
+                              if (lastch == '\r' && thisch == '\n')
+                                    break;
+                              lastch = thisch;
+                        }
+
+                        if (resData.find("\r\n") != std::string::npos)
+                        {
+                              data = resData.substr(0, resData.find("\r\n"));
+                              return SUCCESS_OPERAT;
+                        }
                   }
             }
       }
+      catch (const std::exception &e)
+      {
+            std::cout << e.what() << '\n';
+            return WSAGetLastError();
+      }
 }
+#include "Plugin.h"
+PluginNamespace::PluginManager pluginManager;
+using PluginNamespace::PluginInfo;
+using PluginNamespace::pluginInfo;
 #endif

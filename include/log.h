@@ -104,7 +104,6 @@ namespace logNameSpace
             std::map<std::string, std::shared_ptr<funLog>> funlogList;
       };
 
-      inline Log cout{};
       struct ENDL
       {
       } endl;
@@ -112,7 +111,7 @@ namespace logNameSpace
       // funLog fun
       funLog::funLog(const std::string &name, Log *log)
       {
-            funlog = std::unique_ptr<Log>(new Log(name));
+            this->funlog = std::shared_ptr<Log>(std::make_shared<Log>(name));
             this->name = name;
             this->log = log;
       }
@@ -157,7 +156,7 @@ namespace logNameSpace
 
       Log::Log()
       {
-            this->writeFlie = std::unique_ptr<std::atomic<bool>>(new std::atomic<bool>(false));
+            this->writeFlie = std::shared_ptr<std::atomic<bool>>(std::make_shared<std::atomic<bool>>(false));
             this->logName = "NULL";
             this->logMaxSize = 1024 * 1024 * 128;
 
@@ -171,7 +170,7 @@ namespace logNameSpace
       // Log fun
       Log::Log(const std::string name, int logMaxSize)
       {
-            this->writeFlie = std::unique_ptr<std::atomic<bool>>(new std::atomic<bool>(false));
+            this->writeFlie = std::shared_ptr<std::atomic<bool>>(std::make_shared<std::atomic<bool>>(false));
             this->logName = name;
             this->logMaxSize = logMaxSize;
             mustChangeFlie();
@@ -196,12 +195,6 @@ namespace logNameSpace
                   logFilet << getTime() << " " << msg << std::endl;
                   logFilet.close();
             }
-            for (auto it = funlogList.begin();
-                 it != funlogList.end();
-                 ++it)
-            {
-                  delete &it->second;
-            }
       }
       Log *Log::operator=(Log &other)
       {
@@ -224,16 +217,16 @@ namespace logNameSpace
             for (int i = 0; true; i++)
             {
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__)
-                  paths = std::string("log\\") + logName + std::string(".log");
+                  paths = std::string("log\\") + temp + std::string(".log");
 #endif
 #if __linux__
-                  paths = std::string("/") + logName + std::string("-log/") + temp + std::string(".log");
+                  paths = std::string("/log/") + temp + std::string(".log");
 #endif
                   flieSize = getFileSize1(paths.c_str());
                   if (flieSize >= logMaxSize)
                   {
                         if (i > 0)
-                              temp = temp.substr(0, temp.size() - 3) + "_" + std::to_string(i);
+                              temp = temp.substr(0, temp.length() - 3) + "_" + std::to_string(i);
                         else
                               temp = temp + "_0";
                   }
@@ -300,9 +293,7 @@ namespace logNameSpace
       std::shared_ptr<funLog> Log::getFunLog(const std::string &name)
       {
             if (funlogList.find(name) == funlogList.end())
-            {
                   funlogList[name] = std::make_shared<funLog>(name, this);
-            }
             return funlogList[name];
       }
       const std::string Log::getTime(void) const
