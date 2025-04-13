@@ -105,6 +105,26 @@ int recv(SOCKET &sock, std::string &data)
             return WSAGetLastError();
       }
 }
+#ifdef initClientSocket_
+int initClientSocket(WSADATA &wsaData, SOCKET &sock, sockaddr_in &serverInfo, std::string &serverIP, int serverPort)
+{
+      int iResult = WSAStartup(MAKEWORD(2, 2), &wsaData);
+      // Create socket
+      sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+      if (sock == INVALID_SOCKET)
+      {
+            printf("Error at socket(): %ld\n", WSAGetLastError());
+            WSACleanup();
+            return WSAGetLastError();
+      }
+      // Set address and port
+
+      serverInfo.sin_family = AF_INET;
+      serverInfo.sin_addr.s_addr = inet_addr(serverIP.c_str());
+      serverInfo.sin_port = htons(serverPort);
+      return 0;
+}
+#endif
 #include "Plugin.h"
 PluginNamespace::PluginManager pluginManager;
 using PluginNamespace::PluginInfo;

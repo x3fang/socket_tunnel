@@ -45,10 +45,10 @@ struct healthyBeatInfoStruct
       ~healthyBeatInfoStruct() = default;
       healthyBeatInfoStruct(const std::string &SEID_, SOCKET &healthSocket_, bool server_ = false) : SEID(SEID_), healthSocket(healthSocket_), server(server_) {}
 };
+typedef bool (*DelClient)(const std::string &);
+typedef bool (*Find)(const std::string &, std::map<std::string, std::shared_ptr<IndividualInfoStruct>> *);
 struct PluginInfoStruct
 {
-      typedef bool (*DelClient)(const std::string &);
-      typedef bool (*Find)(const std::string &, std::map<std::string, std::shared_ptr<IndividualInfoStruct>> *);
       DelClient delClient;
       Find find;
       std::shared_ptr<std::map<std::string, std::shared_ptr<IndividualInfoStruct>>> ClientInfo;
@@ -63,6 +63,38 @@ struct PluginInfoStruct
             this->find = other.find;
             this->log = other.log;
             this->pluginManager = other.pluginManager;
+      }
+      PluginInfoStruct(PluginInfoStruct *other)
+      {
+            this->ClientInfo = other->ClientInfo;
+            this->ServerInfo = other->ServerInfo;
+            this->delClient = other->delClient;
+            this->find = other->find;
+            this->log = other->log;
+            this->pluginManager = other->pluginManager;
+      }
+      PluginInfoStruct(std::shared_ptr<void> &other)
+      {
+            PluginInfoStruct *temp = (PluginInfoStruct *)(other.get());
+            this->ClientInfo = temp->ClientInfo;
+            std::cerr << 1;
+            this->ServerInfo = temp->ServerInfo;
+            std::cerr << 1;
+            this->delClient = temp->delClient;
+            std::cerr << 1;
+            this->find = temp->find;
+            this->log = temp->log;
+            this->pluginManager = temp->pluginManager;
+      }
+      PluginInfoStruct operator=(const PluginInfoStruct &other)
+      {
+            this->ClientInfo = other.ClientInfo;
+            this->ServerInfo = other.ServerInfo;
+            this->delClient = other.delClient;
+            this->find = other.find;
+            this->log = other.log;
+            this->pluginManager = other.pluginManager;
+            return *this;
       }
       ~PluginInfoStruct() = default;
       PluginInfoStruct() : pluginManager(std::make_shared<PluginNamespace::PluginManager>()), log(std::make_shared<Log>(g_log)) {}

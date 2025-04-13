@@ -43,7 +43,7 @@ namespace PluginNamespace
             /*
             this function is used to register plugin
             */
-            static const std::pair<bool, const std::string> registerFun(pluginBase *plugin)
+            const std::pair<bool, const std::string> registerFun(pluginBase *plugin)
             {
                   if (!plugin)
                         return std::pair<bool, const std::string>(false, "");
@@ -60,13 +60,16 @@ namespace PluginNamespace
                   else // found same name plugin
                         return std::pair<bool, const std::string>(false, pluginAuthor);
             }
-            static bool runFun(const std::string &funName, PluginInfo &info)
+            bool runFun(const std::string &funName, PluginInfo &info)
             {
+                  for (auto &it : pluginFunList)
+                        std::cerr << it.first << std::endl;
+                  std::cout << 1;
                   if (findFun(funName) && pluginFunList[funName]->used)
                         return pluginFunList[funName]->runFun(info);
                   return false;
             }
-            static std::vector<std::string> getAllPluginName()
+            std::vector<std::string> getAllPluginName()
             {
                   std::vector<std::string> res;
                   for (auto &it : pluginFunList)
@@ -75,20 +78,41 @@ namespace PluginNamespace
                   }
                   return res;
             }
-            inline static bool findFun(const std::string &funName)
+            inline bool findFun(const std::string &funName)
             {
                   return (pluginFunList.find(funName) != pluginFunList.end());
             }
-            inline static std::size_t getLoadPluginNum() { return pluginFunList.size(); }
+            inline std::size_t getLoadPluginNum() { return pluginFunList.size(); }
             PluginManager();
             ~PluginManager() = default;
+            PluginManager(PluginManager *other)
+            {
+                  this->used = other->used;
+                  this->author = other->author;
+                  this->version = other->version;
+                  this->pluginName = other->pluginName;
+                  this->pluginFunList = other->pluginFunList;
+            }
             PluginManager(const PluginManager &other)
             {
+                  this->used = other.used;
+                  this->author = other.author;
+                  this->version = other.version;
+                  this->pluginName = other.pluginName;
+                  this->pluginFunList = other.pluginFunList;
             }
-            PluginManager &operator=(const PluginManager &other) = delete;
+            PluginManager operator=(const PluginManager &other)
+            {
+                  this->used = other.used;
+                  this->author = other.author;
+                  this->version = other.version;
+                  this->pluginName = other.pluginName;
+                  this->pluginFunList = other.pluginFunList;
+                  return *this;
+            }
 
       private:
-            static std::map<std::string, pluginBase *> pluginFunList;
+            std::map<std::string, pluginBase *> pluginFunList;
 
       private:
             bool runFun(PluginInfo &info) override
@@ -104,11 +128,9 @@ namespace PluginNamespace
             this->version = "1.0.0";
             this->pluginName = "PluginManager";
       }
-      std::map<std::string, pluginBase *> PluginManager::pluginFunList;
-      using registerFunValue = const std::pair<bool, const std::string> (*)(pluginBase *);
-      typedef bool (*registerFun)(registerFunValue);
+      typedef bool (*registerFun)(PluginManager &);
       std::vector<HINSTANCE> pluginDllHandle(5, 0);
-      int loadPlugin(const std::string &pluginPath)
+      int loadPlugin(PluginManager &manager, const std::string &pluginPath)
       {
             int res = 0;
             auto pluginPathVector = traverseFiles(std::wstring(pluginPath.begin(), pluginPath.end()), L"dll");
@@ -125,7 +147,7 @@ namespace PluginNamespace
                   auto regFun = ((registerFun)GetProcAddress(pluginDllHandle[i], "registerFun"));
                   if (regFun)
                   {
-                        if (regFun(PluginManager::registerFun))
+                        if (regFun(manager))
                               res++;
                   }
             }

@@ -1,3 +1,4 @@
+#define initClientSocket_
 #include "include\globalDefine.h"
 #include "include\log.h"
 #include "include\Plugin.h"
@@ -9,24 +10,6 @@ WSADATA g_wsaData;
 sockaddr_in g_sockaddr;
 std::thread healthyBeatThread;
 bool stopSign = false;
-int initClientSocket(WSADATA &wsaData, SOCKET &sock, sockaddr_in &serverInfo, std::string &serverIP, int serverPort)
-{
-      int iResult = WSAStartup(MAKEWORD(2, 2), &wsaData);
-      // Create socket
-      sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-      if (sock == INVALID_SOCKET)
-      {
-            printf("Error at socket(): %ld\n", WSAGetLastError());
-            WSACleanup();
-            return WSAGetLastError();
-      }
-      // Set address and port
-
-      serverInfo.sin_family = AF_INET;
-      serverInfo.sin_addr.s_addr = inet_addr(serverIP.c_str());
-      serverInfo.sin_port = htons(serverPort);
-      return 0;
-}
 void healthyBeat(SOCKET &sock)
 {
       while (DEBUG)
@@ -114,7 +97,7 @@ int main()
       g_log.writeln("program start");
       (*connectIp) = "127.0.0.1";
       connectPort = 6020;
-      PluginNamespace::loadPlugin(".\\server_plugin\\");
+      PluginNamespace::loadPlugin(pluginManager, ".\\server_plugin\\");
       initClientSocket(g_wsaData, *mainConnectSocket, g_sockaddr, *connectIp, connectPort);
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__)
       std::string helloMsg = "S" + getLanIp() + "W" + "This is a test!";

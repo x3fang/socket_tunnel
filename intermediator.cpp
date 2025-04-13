@@ -145,9 +145,9 @@ bool arrangeRegister(const std::string &buf, std::string &lanIp_res, int &system
       }
       return false;
 }
-void sendPluginList(SOCKET &sock)
+void sendPluginList(PluginNamespace::PluginManager &pluginManager, SOCKET &sock)
 {
-      auto pluginList = PluginNamespace::PluginManager::getAllPluginName();
+      auto pluginList = pluginManager.getAllPluginName();
       for (auto &pluginName : pluginList)
             send(sock, pluginName);
       send(sock, "end");
@@ -198,7 +198,7 @@ void serverThread(const std::string SEID)
       std::string buf;
       while (!ServerStopFlag)
       {
-            sendPluginList(info->commSocket);
+            sendPluginList(pluginManager, info->commSocket);
             int res = recv(info->commSocket, buf);
             if (res == SUCCESS_OPERAT)
             {
@@ -248,7 +248,7 @@ int main()
       connectPort = 6020;
       g_log.setName("intermediator");
       g_log << "program start" << endl;
-      PluginNamespace::loadPlugin(".\\plugin\\");
+      PluginNamespace::loadPlugin(pluginManager, ".\\plugin\\");
       int res = initServer(*mainConnectSocket, g_wsaData, g_sockaddr, connectPort);
       healthyBeatThread = std::thread(healthyBeat);
       while (true)
