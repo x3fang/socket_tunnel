@@ -75,7 +75,7 @@ bool registerCOS(SOCKET socket,
       prlog->writeln("SEID:" + SEID);
       if (infoMap.find(SEID) == infoMap.end())
       {
-            infoMap[SEID] = std::make_shared<IndividualInfoStruct>(SEID, wanIp, lanIp, systemKind, commit, socket, INVALID_SOCKET);
+            infoMap[SEID] = std::make_shared<IndividualInfoStruct>(std::ref(SEID), std::ref(wanIp), std::ref(lanIp), std::ref(systemKind), std::ref(commit), std::ref(socket), INVALID_SOCKET);
             SEID_res = SEID;
             return true;
       }
@@ -212,15 +212,15 @@ void serverThread(const std::string SEID)
                   {
                         prlog->writeln("plugin name:" + buf);
                         PluginInfoStruct PInfo;
-                        PInfo.ClientInfo = std::make_shared<decltype(::ClientInfo)>(::ClientInfo);
-                        PInfo.ServerInfo = std::make_shared<decltype(::ServerInfo)>(::ServerInfo);
+                        PInfo.ClientInfo = &::ClientInfo;
+                        PInfo.ServerInfo = &::ServerInfo;
                         PInfo.find = ::find;
                         PInfo.delClient = ::delClient;
                         PluginInfo runFunInfo;
-                        runFunInfo.cus = std::make_shared<pluginInfo>();
-                        runFunInfo.cus->data.push_back(std::make_shared<PluginInfoStruct>(PInfo));
-                        runFunInfo.mainConnectSocket = std::make_shared<SOCKET>(info->commSocket);
-                        runFunInfo.healthySocket = std::make_shared<SOCKET>(info->healthSocket);
+                        runFunInfo.cus = new pluginInfo();
+                        runFunInfo.cus->data.push_back(&PInfo);
+                        runFunInfo.mainConnectSocket = &info->commSocket;
+                        runFunInfo.healthySocket = &info->healthSocket;
                         if (pluginManager.findFun(buf))
                         {
                               send(info->commSocket, "ok");
@@ -228,8 +228,14 @@ void serverThread(const std::string SEID)
                                     send(info->commSocket, "ok");
                               else
                                     send(info->commSocket, "failed");
+                              for (auto &data : runFunInfo.cus->data)
+                                    delete data;
+                              delete runFunInfo.cus;
                               continue;
                         }
+                        for (auto &data : runFunInfo.cus->data)
+                              delete data;
+                        delete runFunInfo.cus;
                         send(info->commSocket, "failed");
                         prlog->writeln("runFun failed");
                   }

@@ -25,18 +25,18 @@
 #define EXPORT __declspec(dllexport)
 #define SUCCESS_OPERAT 0
 using namespace logNameSpace;
-std::shared_ptr<std::string> connectIp = std::make_shared<std::string>();
+std::string *connectIp = new std::string();
 int connectPort;
-std::shared_ptr<SOCKET> mainConnectSocket = std::make_shared<SOCKET>();
-std::shared_ptr<SOCKET> healthySocket = std::make_shared<SOCKET>();
+SOCKET *mainConnectSocket = new SOCKET;
+SOCKET *healthySocket = new SOCKET;
 Log g_log;
 template <typename T>
 struct Info
 {
-      std::shared_ptr<T> cus;
-      std::shared_ptr<SOCKET> mainConnectSocket;
-      std::shared_ptr<SOCKET> healthySocket;
-      std::shared_ptr<std::string> connectIp;
+      T *cus;
+      SOCKET *mainConnectSocket;
+      SOCKET *healthySocket;
+      std::string *connectIp;
       int connectPort;
       Info()
           : mainConnectSocket(::mainConnectSocket), healthySocket(::healthySocket),
@@ -60,7 +60,7 @@ struct Info
 };
 int send(SOCKET &sock, const std::string &data)
 {
-      std::string temp("\r\n" + data + "\r\n");
+      std::string temp(std::to_string(data.length()) + "\r" + data);
       int res = send(sock, temp.c_str(), temp.size(), 0);
       if (res == SOCKET_ERROR)
             return false;
@@ -72,31 +72,24 @@ int recv(SOCKET &sock, std::string &data)
       {
             std::string resData;
             char buf[1024] = {0};
+            int recvDataLength = 0;
             while (true)
             {
-                  int res = recv(sock, buf, 2, 0);
+                  int res = recv(sock, buf, 1, 0);
                   if (res == SOCKET_ERROR)
                         return WSAGetLastError();
-                  if (res == 2 && strlen(buf) == 2 && buf[0] == '\r' && buf[1] == '\n')
+                  if (strlen(buf) > 0 && buf[0] == '\r')
                   {
-                        char lastch = 0, thisch = 0;
-                        while (lastch != '\r' || thisch != '\n')
+                        if (recvDataLength != 0)
                         {
-                              res = recv(sock, &thisch, 1, 0);
-                              if (res == SOCKET_ERROR)
-                                    return WSAGetLastError();
-                              resData += thisch;
-                              if (lastch == '\r' && thisch == '\n')
-                                    break;
-                              lastch = thisch;
-                        }
-
-                        if (resData.find("\r\n") != std::string::npos)
-                        {
-                              data = resData.substr(0, resData.find("\r\n"));
+                              recv(sock, buf, recvDataLength, 0);
+                              data = buf;
                               return SUCCESS_OPERAT;
                         }
+                        return -1;
                   }
+                  recvDataLength *= 10;
+                  recvDataLength += atoi(buf);
             }
       }
       catch (const std::exception &e)
@@ -104,6 +97,7 @@ int recv(SOCKET &sock, std::string &data)
             std::cout << e.what() << '\n';
             return WSAGetLastError();
       }
+      return -1;
 }
 #ifdef initClientSocket_
 int initClientSocket(WSADATA &wsaData, SOCKET &sock, sockaddr_in &serverInfo, std::string &serverIP, int serverPort)

@@ -51,10 +51,10 @@ struct PluginInfoStruct
 {
       DelClient delClient;
       Find find;
-      std::shared_ptr<std::map<std::string, std::shared_ptr<IndividualInfoStruct>>> ClientInfo;
-      std::shared_ptr<std::map<std::string, std::shared_ptr<IndividualInfoStruct>>> ServerInfo;
-      std::shared_ptr<PluginNamespace::PluginManager> pluginManager;
-      std::shared_ptr<Log> log;
+      std::map<std::string, std::shared_ptr<IndividualInfoStruct>> *ClientInfo;
+      std::map<std::string, std::shared_ptr<IndividualInfoStruct>> *ServerInfo;
+      PluginNamespace::PluginManager *pluginManager;
+      Log *log;
       PluginInfoStruct(const PluginInfoStruct &other)
       {
             this->ClientInfo = other.ClientInfo;
@@ -97,5 +97,5 @@ struct PluginInfoStruct
             return *this;
       }
       ~PluginInfoStruct() = default;
-      PluginInfoStruct() : pluginManager(std::make_shared<PluginNamespace::PluginManager>()), log(std::make_shared<Log>(g_log)) {}
+      PluginInfoStruct() : pluginManager(&::pluginManager), log(&g_log) {}
 };

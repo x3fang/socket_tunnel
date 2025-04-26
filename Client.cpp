@@ -91,7 +91,7 @@ int main()
       g_log.writeln("program start");
       *connectIp = "127.0.0.1";
       connectPort = 6020;
-      PluginNamespace::loadPlugin(".\\client_plugin\\");
+      PluginNamespace::loadPlugin(pluginManager, std::string(".\\client_plugin\\"));
       initClientSocket(g_wsaData, *mainConnectSocket, g_sockaddr, *connectIp, connectPort);
       std::string helloMsg = "C" + getLanIp() + "W" + "This is a Test!";
       while (connect(*mainConnectSocket, (sockaddr *)&g_sockaddr, sizeof(g_sockaddr)))

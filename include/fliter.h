@@ -5,6 +5,19 @@
 #include <bitset>
 #include <variant>
 #include <memory>
+/*< 000001
+<= 000010
+> 000100
+>= 001000
+== 010000
+!= 100000*/
+// 0 1 2 3 4 5
+#define LESSTHAN std::bitset<Fliter::optNum>(32)
+#define LESSTHAN_OR_EQUAL std::bitset<Fliter::optNum>(16)
+#define MORETHAN std::bitset<Fliter::optNum>(8)
+#define MORETHAN_OR_EQUAL std::bitset<Fliter::optNum>(4)
+#define EQUAL std::bitset<Fliter::optNum>(2)
+#define NOT_EQUAL std::bitset<Fliter::optNum>(1)
 class Fliter
 {
 public:
@@ -61,7 +74,8 @@ public:
       /*
       if this rule's ruleType's typeSupportOpt [2~5] set 1,use int to save value else use string
       */
-      std::string addRule(const std::string &ruleTypeName, int ruleUsedOpt, const std::string &compareValue, bool useRule = true); // return rule id
+      std::string addRule(const std::string &ruleTypeName, const std::string &compareValue, const int ruleUsedOpt, bool useRule = true);
+      std::string addRule(const std::string &ruleTypeName, const std::string &compareValue, const std::bitset<optNum> ruleUsedOpt, bool useRule = true);
       bool setRule(const std::string &ruleTypeName, std::string &ruleId, int ruleUsedOpt, const std::string &compareValue, bool useRule = true);
       bool findRuleType(const std::string &ruleTypeName);
       bool findRule(const std::string &ruleTypeName, const std::string &ruleId);
@@ -89,7 +103,13 @@ bool Fliter::addRuleType(const std::string &ruleTypeName, const std::string &typ
                         std::bitset<optNum>(typeSupportOpt));
       return ruleTypeList.insert(std::pair<std::string, ruleTypeNode>(ruleTypeName, temp)).second;
 }
-std::string Fliter::addRule(const std::string &ruleTypeName, const int ruleUsedOpt, const std::string &compareValue, bool useRule)
+std::string Fliter::addRule(const std::string &ruleTypeName, const std::string &compareValue, const std::bitset<optNum> ruleUsedOpt, bool useRule)
+{
+      // std::string temp = ruleUsedOpt.to_string();
+      int ruleUsedOptInt = ruleUsedOpt.to_string().find_first_of('1');
+      return this->addRule(ruleTypeName, compareValue, ruleUsedOptInt, useRule);
+}
+std::string Fliter::addRule(const std::string &ruleTypeName, const std::string &compareValue, const int ruleUsedOpt, bool useRule)
 {
       if (compareValue.empty())
             return "-3";

@@ -91,6 +91,7 @@ std::vector<std::string> recvAndMatchPluginList(SOCKET &sock)
       }
       return pluginList;
 }
+
 int main()
 {
       g_log.setName("server");
@@ -130,13 +131,17 @@ int main()
                         // std::cin >> inputIndex;
                         if (inputIndex >= 0 && inputIndex < temp.size())
                               send(*mainConnectSocket, temp[inputIndex]);
-                        recv(*mainConnectSocket, buf);
+                        std::cout << recv(*mainConnectSocket, buf);
+
                         if (buf == "ok")
                         {
                               PluginInfo info;
-                              info.cus = std::make_shared<pluginInfo>();
-                              info.cus->data.push_back(std::make_shared<PluginInfoStruct>());
+                              info.cus = new pluginInfo();
+                              info.cus->data.push_back(new PluginInfoStruct());
                               pluginManager.runFun(temp[inputIndex], info);
+                              for (auto &it : info.cus->data)
+                                    delete it;
+                              delete info.cus;
                         }
                         else
                         {

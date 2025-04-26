@@ -260,6 +260,7 @@ namespace logNameSpace
 #endif
                   logFilet << getTime() << " " << this->msg;
                   logFilet.close();
+                  this->msg = (this->msg.find_last_of("\n") == this->msg.length() - 1 ? "" : this->msg.substr(this->msg.find_last_of("\n") + 1));
             }
             mustChangeFlie();
             return;

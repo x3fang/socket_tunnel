@@ -17,7 +17,7 @@ namespace PluginNamespace
       std::vector<std::string> traverseFiles(const std::wstring &rootDir, const std::wstring &compareSuffix);
       struct pluginInfo
       {
-            std::vector<std::shared_ptr<void>> data;
+            std::vector<void *> data;
       };
       using PluginInfo = Info<pluginInfo>;
       class pluginBase
@@ -62,9 +62,6 @@ namespace PluginNamespace
             }
             bool runFun(const std::string &funName, PluginInfo &info)
             {
-                  for (auto &it : pluginFunList)
-                        std::cerr << it.first << std::endl;
-                  std::cout << 1;
                   if (findFun(funName) && pluginFunList[funName]->used)
                         return pluginFunList[funName]->runFun(info);
                   return false;

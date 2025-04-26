@@ -62,7 +62,7 @@ public:
       {
             auto sock = info.mainConnectSocket;
             std::string data;
-            send(*sock, (*(std::string *)(info.cus->data[1].get())));
+            send(*sock, (*(std::string *)(info.cus->data[0])));
             recv(*sock, data);
             if (data == "0") // false
                   return false;
@@ -92,7 +92,6 @@ public:
                       << std::setw(35) << "SEID" << "Commit" << std::endl;
             std::string SEID, wanIp, lanIp, commit, systemKind;
             int outputNum = 0;
-            info.cus->data.push_back(std::make_shared<std::vector<std::string>>(10, ""));
             while (data != "end")
             {
                   recv(*sock, data);
@@ -106,13 +105,12 @@ public:
                                   << std::setw(20) << lanIp
                                   << std::setw(15) << (systemKind == "0" ? "Windows" : "Linux")
                                   << std::setw(35) << SEID << commit << std::endl;
-                        std::static_pointer_cast<std::vector<std::string>>(info.cus->data[1])->push_back(SEID);
                         outputNum++;
                   }
                   else
                         break;
             }
-            (*std::static_pointer_cast<int>(info.cus->data[2])) = outputNum;
+            info.cus->data.push_back((int *)(new int(outputNum)));
             std::cout << "Total: " << outputNum << std::endl;
             return true;
       }
@@ -129,7 +127,8 @@ class connectClient : public PluginNamespace::pluginBase
 public:
       bool runFun(PluginNamespace::PluginInfo &info) override
       {
-            std::shared_ptr<PluginInfoStruct> pluginInfo(std::static_pointer_cast<PluginInfoStruct>(info.cus->data[0]));
+            // system("pause");
+            auto pluginInfo = (PluginInfoStruct *)(info.cus->data[0]);
             auto serverSock = info.mainConnectSocket;
             std::string data;
             int clientNum = 0;
@@ -137,15 +136,18 @@ public:
             {
                   system("cls");
                   std::cout << pluginInfo->pluginManager->runFun("showClient", info) << std::endl;
-                  clientNum = *std::static_pointer_cast<int>(info.cus->data[2]);
+                  clientNum = *(int *)(info.cus->data[1]);
                   std::cout << "input a number:";
                   if (kbhit())
                   {
                         int num;
                         std::cin >> num;
                         if (num < 0 || num >= clientNum)
+                        {
+                              send(*serverSock, "\r\nnext\r\n");
                               continue;
-                        int res = send(*serverSock, std::static_pointer_cast<std::vector<std::string>>(info.cus->data[1])->operator[](num));
+                        }
+                        int res = send(*serverSock, ((std::vector<std::string> *)(info.cus->data[1]))->operator[](num));
                         recv(*serverSock, data);
                         if (data == "ok")
                         {
@@ -171,7 +173,8 @@ public:
                         }
                   }
                   else
-                        Sleep(1500);
+                        Sleep(500);
+                  send(*serverSock, "\r\nnext\r\n");
             }
             return true;
       }
