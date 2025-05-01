@@ -4,7 +4,6 @@
 #include "include\Plugin.h"
 #include "include\serverStruct.h"
 #include <iostream>
-// using namespace logNameSpace;
 using logNameSpace::Log;
 WSADATA g_wsaData;
 sockaddr_in g_sockaddr;
@@ -128,7 +127,7 @@ int main()
                               std::cout << "[ " << index++ << " ] pluginName:" << it << "\n";
                         std::cout << "input plugin index:";
                         inputIndex = 0;
-                        // std::cin >> inputIndex;
+                        std::cin >> inputIndex;
                         if (inputIndex >= 0 && inputIndex < temp.size())
                               send(*mainConnectSocket, temp[inputIndex]);
                         std::cout << recv(*mainConnectSocket, buf);

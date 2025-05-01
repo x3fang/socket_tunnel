@@ -131,7 +131,6 @@ class connectClient : public PluginNamespace::pluginBase
 public:
       bool runFun(PluginNamespace::PluginInfo &info) override
       {
-            // system("pause");
             auto pluginInfo = std::static_pointer_cast<PluginInfoStruct>(info.cus->data[0]);
             auto serverSock = info.mainConnectSocket;
             std::string data;
@@ -147,10 +146,10 @@ public:
                   std::shared_ptr<std::vector<std::string>> clientSEIDList = std::static_pointer_cast<std::vector<std::string>>(info.cus->data.back());
                   info.cus->data.pop_back();
                   std::cout << "input a number:";
-                  if (/*kbhit()*/ true)
+                  if (kbhit())
                   {
                         int num = 0;
-                        // std::cin >> num;
+                        std::cin >> num;
                         if (num < 0 || num >= clientNum)
                         {
                               send(*serverSock, "\r\nnext\r\n");
@@ -160,6 +159,7 @@ public:
                         recv(*serverSock, data);
                         if (data == "ok")
                         {
+                              system("cls");
                               intoConnect = true;
                               recv(*serverSock, data);
                               std::cout << data;
