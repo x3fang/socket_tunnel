@@ -13,12 +13,12 @@ public:
             if (recv(*sock, data) == SUCCESS_OPERAT)
             {
                   std::stringstream ss(data);
-                  auto pluginInfo = (PluginInfoStruct *)(info.cus->data[0]);
+                  auto pluginInfo = std::static_pointer_cast<std::shared_ptr<PluginInfoStruct>>(info.cus->data[0]);
                   std::vector<std::string> sendData;
                   sendData.push_back("0");
                   if (data[0] == 'S')
                   {
-                        for (auto &it : (*pluginInfo->ServerInfo))
+                        for (auto &it : (*(*pluginInfo)->ServerInfo))
                               if (it.second->lanIp == data.substr(1))
                                     sendData.push_back(it.second->wanIp + " " +
                                                        it.second->lanIp + " " +
@@ -27,7 +27,7 @@ public:
                   }
                   else if (data[0] == 'C')
                   {
-                        for (auto &it : (*pluginInfo->ClientInfo))
+                        for (auto &it : (*(*pluginInfo)->ClientInfo))
                               if (it.second->lanIp == data.substr(1))
                                     sendData.push_back(it.second->wanIp + " " +
                                                        it.second->lanIp + " " +
@@ -63,7 +63,7 @@ public:
             if (recv(*sock, data) == SUCCESS_OPERAT)
             {
                   std::stringstream ss(data);
-                  auto pluginInfo = (PluginInfoStruct *)(info.cus->data[0]);
+                  auto pluginInfo = std::static_pointer_cast<PluginInfoStruct>(info.cus->data[0]);
                   if (send(*sock,
                            (pluginInfo->delClient(data.substr(1))) ? "0" : "1") == SUCCESS_OPERAT)
                         return true;
@@ -85,16 +85,23 @@ class showClient : public PluginNamespace::pluginBase
 public:
       bool runFun(PluginNamespace::PluginInfo &info) override
       {
-            auto pluginInfo = (PluginInfoStruct *)(info.cus->data[0]);
+            auto pluginInfo = std::static_pointer_cast<PluginInfoStruct>(info.cus->data[0]);
             auto funlog = pluginInfo->log->getFunLog("showClientRunFun");
             auto sock = info.mainConnectSocket;
             std::string sendMsg;
-            Fliter *fliter;
-            if (info.cus->data.size() == 2)
+            std::shared_ptr<Fliter> fliter;
+            if (info.cus->data.size() >= 2)
             {
-                  fliter = (Fliter *)(info.cus->data[1]);
-                  if (!fliter)
-                        fliter = new Fliter();
+                  fliter = std::static_pointer_cast<Fliter>(info.cus->data[1]);
+                  fliter->addRuleType("use", EQUAL | NOT_EQUAL);
+                  fliter->addRuleType("wanIp", EQUAL | NOT_EQUAL);
+                  fliter->addRuleType("lanIp", EQUAL | NOT_EQUAL);
+                  fliter->addRuleType("commit", EQUAL | NOT_EQUAL);
+                  fliter->addRuleType("systemKind", EQUAL | NOT_EQUAL);
+            }
+            if (!fliter)
+            {
+                  fliter = std::make_shared<Fliter>();
                   fliter->addRuleType("use", EQUAL | NOT_EQUAL);
                   fliter->addRuleType("wanIp", EQUAL | NOT_EQUAL);
                   fliter->addRuleType("lanIp", EQUAL | NOT_EQUAL);
@@ -102,36 +109,37 @@ public:
                   fliter->addRuleType("systemKind", EQUAL | NOT_EQUAL);
             }
             funlog->writeln(std::to_string(pluginInfo->ClientInfo->size()));
-            std::cout << &pluginInfo->ClientInfo << std::endl;
-            system("pause");
-            for (auto it = (pluginInfo->ClientInfo)->begin();
-                 it != (pluginInfo->ClientInfo)->end(); it++)
+            try
             {
-                  auto data = it->second.get();
-
-                  // if ((fliter->matchRule("wanIp", data->wanIp) &&
-                  //      fliter->matchRule("lanIp", data->lanIp) &&
-                  //      fliter->matchRule("systemKind", std::to_string(data->systemKind)) &&
-                  //      fliter->matchRule("commit", data->commit) &&
-                  //      fliter->matchRule("use", std::to_string((data->use ? 1 : 0)))))
-                  // {
-                  sendMsg = data->wanIp + " " +
-                            data->lanIp + " " +
-                            std::to_string(data->systemKind) + " " +
-                            data->SEID + "\r\n" +
-                            data->commit;
-                  int res = send(*sock, sendMsg);
-                  if (res != SUCCESS_OPERAT)
+                  for (auto it = (pluginInfo->ClientInfo)->begin(); it != (pluginInfo->ClientInfo)->end(); it++)
                   {
-                        funlog->writeln(("send error:" + std::to_string(res)));
-                        send(*sock, "end");
-                        delete fliter;
-                        return false;
+                        auto data = *(it->second.get());
+                        if ((fliter->matchRule("wanIp", data.wanIp) &&
+                             fliter->matchRule("lanIp", data.lanIp) &&
+                             fliter->matchRule("systemKind", std::to_string(data.systemKind)) &&
+                             fliter->matchRule("commit", data.commit) &&
+                             fliter->matchRule("use", std::to_string((data.use ? 1 : 0)))))
+                        {
+                              sendMsg = data.wanIp + " " +
+                                        data.lanIp + " " +
+                                        std::to_string(data.systemKind) + " " +
+                                        data.SEID + "\r\n" +
+                                        data.commit;
+                              int res = send(*sock, sendMsg);
+                              if (res != SUCCESS_OPERAT)
+                              {
+                                    funlog->writeln(("send error:" + std::to_string(WSAGetLastError())));
+                                    send(*sock, "end");
+                                    return false;
+                              }
+                        }
                   }
-                  // }
+            }
+            catch (const std::exception &e)
+            {
+                  funlog->writeln(("ERROR:" + std::string(e.what())));
             }
             send(*sock, "end");
-            delete fliter;
             return true;
       }
       showClient()
@@ -149,7 +157,7 @@ public:
       {
             bool status = true;
 
-            auto pluginInfo = (PluginInfoStruct *)(info.cus->data[0]);
+            auto pluginInfo = std::static_pointer_cast<PluginInfoStruct>(info.cus->data[0]);
             auto funlog = pluginInfo->log->getFunLog("connectClientRunFun");
             auto serverSock = info.mainConnectSocket;
 
@@ -159,12 +167,13 @@ public:
             fliter.addRuleType("use", EQUAL | NOT_EQUAL);
             fliter.addRule("use", "0", EQUAL);
 
-            info.cus->data.push_back((void *)(&fliter));
+            info.cus->data.push_back((std::shared_ptr<void>)(std::make_shared<Fliter>(fliter)));
 
             while (true)
             {
                   pluginInfo->pluginManager->runFun("showClient", info);
                   int res = recv(*serverSock, data);
+                  funlog->writeln(("data:" + data));
                   if (res == SUCCESS_OPERAT)
                   {
                         if (data == "\r\nnext\r\n")
@@ -173,29 +182,33 @@ public:
                               break;
                         else if (pluginInfo->ClientInfo->find(data) != pluginInfo->ClientInfo->end())
                         {
+                              std::string clientSEID = data;
                               pluginInfo->ClientInfo->at(data)->use = true;
                               auto clientSock = pluginInfo->ClientInfo->at(data)->commSocket;
-                              send(*serverSock, "ok");
-                              send(clientSock, pluginName);
-                              recv(clientSock, data);
+                              sendPluginList(*pluginInfo->pluginManager, *clientSock);
+                              send(*clientSock, pluginName);
+                              recv(*clientSock, data);
                               send(*serverSock, data);
                               if (data == "ok")
                               {
-                                    recv(clientSock, data);
+                                    recv(*clientSock, data);
                                     send(*serverSock, data);
                                     while (true)
                                     {
+                                          data.clear();
                                           if (recv(*serverSock, data) == SUCCESS_OPERAT)
                                           {
                                                 if (data == "\r\nexit\r\n")
                                                       break;
                                           }
-                                          send(clientSock, data);
-                                          recv(clientSock, data);
+                                          send(*clientSock, data);
+                                          recv(*clientSock, data);
                                           send(*serverSock, data);
+                                          if (data == "\r\n[exit]\r\n")
+                                                break;
                                     }
                               }
-                              pluginInfo->ClientInfo->at(data)->use = false;
+                              pluginInfo->ClientInfo->at(clientSEID)->use = false;
                               data.clear();
                         }
                         else
@@ -215,6 +228,16 @@ public:
             this->pluginName = "connectClient";
             this->version = "1.0.0";
             this->author = "x3fang";
+      }
+
+private:
+      void sendPluginList(PluginNamespace::PluginManager &pluginManager, SOCKET &sock)
+      {
+            auto pluginList = pluginManager.getAllPluginName();
+            for (auto &pluginName : pluginList)
+                  send(sock, pluginName);
+            send(sock, "end");
+            return;
       }
 };
 static find Plugin_find;

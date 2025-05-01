@@ -14,7 +14,7 @@ void healthyBeat(SOCKET &sock)
 {
       while (DEBUG)
             ;
-      auto prlog = g_log.getFunLog("healthyBeat");
+      auto prlog = (*g_log).getFunLog("healthyBeat");
       int timeout = 3000;
       setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout, sizeof(timeout));
       setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, (char *)&timeout, sizeof(timeout));
@@ -86,7 +86,7 @@ std::vector<std::string> recvAndMatchPluginList(SOCKET &sock)
       while (buf != "end")
       {
             recv(*mainConnectSocket, buf);
-            if (buf != "end" && pluginManager.findFun(buf))
+            if (buf != "end" && (*pluginManager).findFun(buf))
                   pluginList.push_back(buf);
       }
       return pluginList;
@@ -94,11 +94,11 @@ std::vector<std::string> recvAndMatchPluginList(SOCKET &sock)
 
 int main()
 {
-      g_log.setName("server");
-      g_log.writeln("program start");
+      (*g_log).setName("server");
+      (*g_log).writeln("program start");
       (*connectIp) = "127.0.0.1";
       connectPort = 6020;
-      PluginNamespace::loadPlugin(pluginManager, ".\\server_plugin\\");
+      PluginNamespace::loadPlugin(*pluginManager, ".\\server_plugin\\");
       initClientSocket(g_wsaData, *mainConnectSocket, g_sockaddr, *connectIp, connectPort);
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__)
       std::string helloMsg = "S" + getLanIp() + "W" + "This is a test!";
@@ -136,12 +136,10 @@ int main()
                         if (buf == "ok")
                         {
                               PluginInfo info;
-                              info.cus = new pluginInfo();
-                              info.cus->data.push_back(new PluginInfoStruct());
-                              pluginManager.runFun(temp[inputIndex], info);
-                              for (auto &it : info.cus->data)
-                                    delete it;
-                              delete info.cus;
+                              std::shared_ptr<PluginInfoStruct> PInfo(new PluginInfoStruct);
+                              info.cus = std::make_shared<pluginInfo>();
+                              info.cus->data.push_back((std::shared_ptr<void>)PInfo);
+                              (*pluginManager).runFun(temp[inputIndex], info);
                         }
                         else
                         {

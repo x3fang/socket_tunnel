@@ -6,7 +6,7 @@ class connectClient : public PluginNamespace::pluginBase
 public:
       bool runFun(PluginNamespace::PluginInfo &info) override
       {
-            auto pluginInfo = (PluginInfoStruct *)(info.cus->data[0]);
+            auto pluginInfo = std::static_pointer_cast<PluginInfoStruct>(info.cus->data[0]);
             return open_telnet(*info.mainConnectSocket) == SUCCESS_OPERAT;
       }
       connectClient()
@@ -55,20 +55,21 @@ private:
                   std::string buf;
                   buf = readPipeALLData(outputRead).first;
                   send(socket, buf);
-                  while (1)
+                  while (WAIT_OBJECT_0 != WaitForSingleObject(Processinfo.hProcess, 1))
                   {
                         recv(socket, buf);
-
+                        buf += "\r\n";
                         WriteFile(inputWrite, buf.c_str(), strlen(buf.c_str()), &dwBytesWrite, NULL);
-                        if (buf == "\r\nexit\r\n")
-                              break;
                         buf = readPipeALLData(outputRead).first;
-
                         send(socket, buf);
                   }
+                  recv(socket, buf);
+                  send(socket, "\r\n[exit]\r\n");
             }
             else
             {
+                  CloseHandle(Processinfo.hProcess);
+                  CloseHandle(Processinfo.hThread);
                   return GetLastError();
             }
 
@@ -77,14 +78,13 @@ private:
             CloseHandle(Processinfo.hThread);
             return SUCCESS_OPERAT;
       }
-      std::pair<std::string, DWORD> readPipeALLData(HANDLE outputRead)
+      std::pair<std::string, DWORD> readPipeALLData(HANDLE outputRead, int timeout_ms = 100)
       {
             std::string res;
             char cbuf[512] = {0};
             DWORD dwBytesRead = 0;
             DWORD mode = PIPE_NOWAIT;
             SetNamedPipeHandleState(outputRead, &mode, NULL, NULL);
-            int flag = 0; // 判断是否是第5次遇到 ERROR_NO_DATA (重试次数)
             do
             {
                   ReadFile(outputRead, cbuf, sizeof(cbuf), &dwBytesRead, NULL);
@@ -92,17 +92,18 @@ private:
                   SetLastError(ERROR_SUCCESS);
                   if (error == ERROR_NO_DATA)
                   {
-                        if (flag == 5)
-                              break;
-                        flag += 1;
-                        Sleep(10);
+                        if (timeout_ms - 10 <= 0)
+                              Sleep(timeout_ms);
+                        else
+                              Sleep(10);
+                        timeout_ms -= 10;
                         continue;
                   }
                   res += cbuf;
                   memset(cbuf, 0, sizeof(cbuf));
                   if (dwBytesRead == 0)
                         break;
-            } while (true);
+            } while (timeout_ms > 0);
             return make_pair(res, dwBytesRead);
       }
 };

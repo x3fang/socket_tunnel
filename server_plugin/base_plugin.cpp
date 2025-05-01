@@ -61,8 +61,9 @@ public:
       bool runFun(PluginNamespace::PluginInfo &info) override
       {
             auto sock = info.mainConnectSocket;
+            auto pluginInfo = std::static_pointer_cast<PluginInfoStruct>(info.cus->data[0]);
             std::string data;
-            send(*sock, (*(std::string *)(info.cus->data[0])));
+            send(*sock, (*(std::string *)(std::static_pointer_cast<PluginInfoStruct>(info.cus->data[1]).get())));
             recv(*sock, data);
             if (data == "0") // false
                   return false;
@@ -92,6 +93,7 @@ public:
                       << std::setw(35) << "SEID" << "Commit" << std::endl;
             std::string SEID, wanIp, lanIp, commit, systemKind;
             int outputNum = 0;
+            std::shared_ptr<std::vector<std::string>> clientSEIDList = std::make_shared<std::vector<std::string>>();
             while (data != "end")
             {
                   recv(*sock, data);
@@ -106,11 +108,13 @@ public:
                                   << std::setw(15) << (systemKind == "0" ? "Windows" : "Linux")
                                   << std::setw(35) << SEID << commit << std::endl;
                         outputNum++;
+                        (*clientSEIDList).push_back(SEID);
                   }
                   else
                         break;
             }
-            info.cus->data.push_back((int *)(new int(outputNum)));
+            info.cus->data.push_back((std::shared_ptr<void>)clientSEIDList);
+            info.cus->data.push_back((std::shared_ptr<void>)(std::make_shared<int>(--outputNum)));
             std::cout << "Total: " << outputNum << std::endl;
             return true;
       }
@@ -128,41 +132,46 @@ public:
       bool runFun(PluginNamespace::PluginInfo &info) override
       {
             // system("pause");
-            auto pluginInfo = (PluginInfoStruct *)(info.cus->data[0]);
+            auto pluginInfo = std::static_pointer_cast<PluginInfoStruct>(info.cus->data[0]);
             auto serverSock = info.mainConnectSocket;
             std::string data;
             int clientNum = 0;
             while (true)
             {
+                  bool intoConnect = false;
+
                   system("cls");
-                  std::cout << pluginInfo->pluginManager->runFun("showClient", info) << std::endl;
-                  clientNum = *(int *)(info.cus->data[1]);
+                  pluginInfo->pluginManager->runFun("showClient", info);
+                  clientNum = *std::static_pointer_cast<int>(info.cus->data.back());
+                  info.cus->data.pop_back();
+                  std::shared_ptr<std::vector<std::string>> clientSEIDList = std::static_pointer_cast<std::vector<std::string>>(info.cus->data.back());
+                  info.cus->data.pop_back();
                   std::cout << "input a number:";
-                  if (kbhit())
+                  if (/*kbhit()*/ true)
                   {
-                        int num;
-                        std::cin >> num;
+                        int num = 0;
+                        // std::cin >> num;
                         if (num < 0 || num >= clientNum)
                         {
                               send(*serverSock, "\r\nnext\r\n");
                               continue;
                         }
-                        int res = send(*serverSock, ((std::vector<std::string> *)(info.cus->data[1]))->operator[](num));
+                        int res = send(*serverSock, (*clientSEIDList)[num]);
                         recv(*serverSock, data);
                         if (data == "ok")
                         {
+                              intoConnect = true;
                               recv(*serverSock, data);
                               std::cout << data;
                               while (true)
                               {
-                                    std::getline(std::cin, data);
+                                    getline(std::cin, data);
+                                    if (data.length() == 0)
+                                          continue;
                                     send(*serverSock, data);
                                     recv(*serverSock, data);
-                                    if (data == "\r\nend\r\n")
-                                    {
-                                          send(*serverSock, "\r\nexit\r\n");
+                                    if (data == "\r\n[exit]\r\n")
                                           break;
-                                    }
                                     std::cout << data;
                               }
                         }
@@ -172,9 +181,9 @@ public:
                               getch();
                         }
                   }
-                  else
-                        Sleep(500);
                   send(*serverSock, "\r\nnext\r\n");
+                  if (!intoConnect)
+                        Sleep(800);
             }
             return true;
       }

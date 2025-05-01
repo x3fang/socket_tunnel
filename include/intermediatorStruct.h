@@ -7,18 +7,24 @@ struct IndividualInfoStruct
       std::string SEID;
       int systemKind;
       std::string commit;
-      SOCKET commSocket = INVALID_SOCKET, healthSocket = INVALID_SOCKET;
+      std::shared_ptr<SOCKET> commSocket = nullptr, healthSocket = nullptr;
       IndividualInfoStruct() = default;
       ~IndividualInfoStruct() = default;
-      IndividualInfoStruct(const std::string &SEID, const std::string &wanIp, const std::string &lanIp, int systemKind, const std::string &commit, SOCKET commSocket, SOCKET healthSocket)
+      IndividualInfoStruct(const std::string SEID,
+                           const std::string wanIp,
+                           const std::string lanIp,
+                           int systemKind,
+                           const std::string commit,
+                           SOCKET commSocket,
+                           SOCKET healthSocket)
       {
             this->SEID = SEID;
             this->wanIp = wanIp;
             this->lanIp = lanIp;
             this->systemKind = systemKind;
             this->commit = commit;
-            this->commSocket = commSocket;
-            this->healthSocket = healthSocket;
+            this->commSocket = std::make_shared<SOCKET>(commSocket);
+            this->healthSocket = std::make_shared<SOCKET>(healthSocket);
       }
 };
 struct healthyBeatInfoStruct
@@ -46,15 +52,15 @@ struct healthyBeatInfoStruct
       healthyBeatInfoStruct(const std::string &SEID_, SOCKET &healthSocket_, bool server_ = false) : SEID(SEID_), healthSocket(healthSocket_), server(server_) {}
 };
 typedef bool (*DelClient)(const std::string &);
-typedef bool (*Find)(const std::string &, std::map<std::string, std::shared_ptr<IndividualInfoStruct>> *);
+typedef bool (*Find)(const std::string &, std::shared_ptr<std::map<std::string, std::shared_ptr<IndividualInfoStruct>>>);
 struct PluginInfoStruct
 {
       DelClient delClient;
       Find find;
-      std::map<std::string, std::shared_ptr<IndividualInfoStruct>> *ClientInfo;
-      std::map<std::string, std::shared_ptr<IndividualInfoStruct>> *ServerInfo;
-      PluginNamespace::PluginManager *pluginManager;
-      Log *log;
+      std::shared_ptr<std::map<std::string, std::shared_ptr<IndividualInfoStruct>>> ClientInfo;
+      std::shared_ptr<std::map<std::string, std::shared_ptr<IndividualInfoStruct>>> ServerInfo;
+      std::shared_ptr<PluginNamespace::PluginManager> pluginManager;
+      std::shared_ptr<Log> log;
       PluginInfoStruct(const PluginInfoStruct &other)
       {
             this->ClientInfo = other.ClientInfo;
@@ -97,5 +103,5 @@ struct PluginInfoStruct
             return *this;
       }
       ~PluginInfoStruct() = default;
-      PluginInfoStruct() : pluginManager(&::pluginManager), log(&g_log) {}
+      PluginInfoStruct() : pluginManager(::pluginManager), log(g_log) {}
 };

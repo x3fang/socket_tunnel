@@ -7,7 +7,8 @@ bool ServerStopFlag = false;
 WSADATA g_wsaData;
 sockaddr_in g_sockaddr;
 std::thread healthyBeatThread;
-std::map<std::string, std::shared_ptr<IndividualInfoStruct>> ServerInfo, ClientInfo;
+std::shared_ptr<std::map<std::string, std::shared_ptr<IndividualInfoStruct>>> ServerInfo(std::make_shared<std::map<std::string, std::shared_ptr<IndividualInfoStruct>>>());
+std::shared_ptr<std::map<std::string, std::shared_ptr<IndividualInfoStruct>>> ClientInfo(std::make_shared<std::map<std::string, std::shared_ptr<IndividualInfoStruct>>>());
 std::vector<healthyBeatInfoStruct> healthyBeatSOCKETList;
 std::vector<std::thread> serverThreadArry;
 
@@ -70,12 +71,12 @@ bool registerCOS(SOCKET socket,
                  std::string &SEID_res,
                  std::map<std::string, std::shared_ptr<IndividualInfoStruct>> &infoMap)
 {
-      static auto prlog = g_log.getFunLog("registerCOS");
+      static auto prlog = (*g_log).getFunLog("registerCOS");
       std::string SEID = createSEID(lanIp + wanIp + std::to_string(systemKind) + commit);
       prlog->writeln("SEID:" + SEID);
       if (infoMap.find(SEID) == infoMap.end())
       {
-            infoMap[SEID] = std::make_shared<IndividualInfoStruct>(std::ref(SEID), std::ref(wanIp), std::ref(lanIp), std::ref(systemKind), std::ref(commit), std::ref(socket), INVALID_SOCKET);
+            infoMap[SEID] = std::make_shared<IndividualInfoStruct>(SEID, wanIp, lanIp, systemKind, commit, socket, INVALID_SOCKET);
             SEID_res = SEID;
             return true;
       }
@@ -83,49 +84,49 @@ bool registerCOS(SOCKET socket,
 }
 inline bool registerClient(SOCKET socket, const std::string &wanIp, const std::string &lanIp, int systemKind, const std::string &commit, std::string &SEID_res)
 {
-      return registerCOS(socket, wanIp, lanIp, systemKind, commit, SEID_res, ClientInfo);
+      return registerCOS(socket, wanIp, lanIp, systemKind, commit, SEID_res, *ClientInfo);
 }
 inline bool registerServer(SOCKET socket, const std::string &wanIp, const std::string &lanIp, int systemKind, const std::string &commit, std::string &SEID_res)
 {
-      return registerCOS(socket, wanIp, lanIp, systemKind, commit, SEID_res, ServerInfo);
+      return registerCOS(socket, wanIp, lanIp, systemKind, commit, SEID_res, *ServerInfo);
 }
 bool del(const std::string &SEID, std::map<std::string, std::shared_ptr<IndividualInfoStruct>> *infoMap)
 {
       if ((*infoMap).find(SEID) != (*infoMap).end())
       {
-            if ((*infoMap)[SEID]->healthSocket != INVALID_SOCKET)
+            if (*(*infoMap)[SEID]->healthSocket != INVALID_SOCKET)
             {
-                  send((*infoMap)[SEID]->healthSocket, "del");
-                  closesocket((*infoMap)[SEID]->healthSocket);
-                  (*infoMap)[SEID]->healthSocket = INVALID_SOCKET;
+                  send(*(*infoMap)[SEID]->healthSocket, "del");
+                  closesocket(*(*infoMap)[SEID]->healthSocket);
+                  *(*infoMap)[SEID]->healthSocket = INVALID_SOCKET;
                   healthyBeatSOCKETList.erase(std::find(healthyBeatSOCKETList.begin(), healthyBeatSOCKETList.end(), SEID));
             }
-            closesocket((*infoMap)[SEID]->commSocket);
-            (*infoMap)[SEID]->commSocket = INVALID_SOCKET;
+            closesocket(*(*infoMap)[SEID]->commSocket);
+            *(*infoMap)[SEID]->commSocket = INVALID_SOCKET;
             (*infoMap).erase(SEID);
             return true;
       }
       return false;
 }
-inline bool find(const std::string &SEID, std::map<std::string, std::shared_ptr<IndividualInfoStruct>> *infoMap)
+inline bool find(const std::string &SEID, std::shared_ptr<std::map<std::string, std::shared_ptr<IndividualInfoStruct>>> infoMap)
 {
       return (*infoMap).find(SEID) != (*infoMap).end();
 }
 bool delClient(const std::string &SEID)
 {
-      static auto prlog = g_log.getFunLog("delClient");
+      static auto prlog = (*g_log).getFunLog("delClient");
       prlog->writeln("SEID:" + SEID);
-      return del(SEID, &ClientInfo);
+      return del(SEID, &*ClientInfo);
 }
 bool delServer(const std::string &SEID)
 {
-      static auto prlog = g_log.getFunLog("delServer");
+      static auto prlog = (*g_log).getFunLog("delServer");
       prlog->writeln("SEID:" + SEID);
-      return del(SEID, &ServerInfo);
+      return del(SEID, &*ServerInfo);
 }
 bool arrangeRegister(const std::string &buf, std::string &lanIp_res, int &systemKind_res, std::string &commit_res)
 {
-      static auto prlog = g_log.getFunLog("arrangeRegister");
+      static auto prlog = (*g_log).getFunLog("arrangeRegister");
       prlog->writeln("buf:" + buf);
       int LSS = buf.find_first_not_of("0123456789.", 1); // lanIp and system kinds separator
       std::string lanIP = buf.substr(1, LSS - 1);
@@ -157,7 +158,7 @@ void healthyBeat()
 {
       while (DEBUG)
             ;
-      static auto prlog = g_log.getFunLog("healthyBeat");
+      static auto prlog = (*g_log).getFunLog("healthyBeat");
       std::default_random_engine e;
       e.seed(time(0));
       std::string buf;
@@ -189,17 +190,17 @@ void serverThread(const std::string SEID)
 {
       int si = 0;
       si = 1;
-      auto prlog = g_log.getFunLog("ST" + SEID);
-      auto info = ServerInfo[SEID];
+      auto prlog = (*g_log).getFunLog("ST" + SEID);
+      auto info = (*ServerInfo)[SEID];
       prlog->writeln("waiting for server healthy socket connect");
-      while (info->healthSocket == INVALID_SOCKET)
+      while (*info->healthSocket == INVALID_SOCKET)
             ;
       prlog->writeln("server healthy socket connect success");
       std::string buf;
       while (!ServerStopFlag)
       {
-            sendPluginList(pluginManager, info->commSocket);
-            int res = recv(info->commSocket, buf);
+            sendPluginList(*pluginManager, *info->commSocket);
+            int res = recv(*info->commSocket, buf);
             if (res == SUCCESS_OPERAT)
             {
                   if (buf.find("\r\nexit\r\n") != std::string::npos)
@@ -211,39 +212,33 @@ void serverThread(const std::string SEID)
                   else
                   {
                         prlog->writeln("plugin name:" + buf);
-                        PluginInfoStruct PInfo;
-                        PInfo.ClientInfo = &::ClientInfo;
-                        PInfo.ServerInfo = &::ServerInfo;
-                        PInfo.find = ::find;
-                        PInfo.delClient = ::delClient;
+                        std::shared_ptr<PluginInfoStruct> PInfo(new PluginInfoStruct);
+                        (*PInfo).ClientInfo = ::ClientInfo;
+                        (*PInfo).ServerInfo = ::ServerInfo;
+                        (*PInfo).find = ::find;
+                        (*PInfo).delClient = ::delClient;
                         PluginInfo runFunInfo;
-                        runFunInfo.cus = new pluginInfo();
-                        runFunInfo.cus->data.push_back(&PInfo);
-                        runFunInfo.mainConnectSocket = &info->commSocket;
-                        runFunInfo.healthySocket = &info->healthSocket;
-                        if (pluginManager.findFun(buf))
+                        runFunInfo.cus = std::make_shared<pluginInfo>();
+                        runFunInfo.cus->data.push_back((std::shared_ptr<void>)PInfo);
+                        runFunInfo.mainConnectSocket = info->commSocket;
+                        runFunInfo.healthySocket = info->healthSocket;
+                        if ((*pluginManager).findFun(buf))
                         {
-                              send(info->commSocket, "ok");
-                              if (pluginManager.runFun(buf, runFunInfo))
-                                    send(info->commSocket, "ok");
+                              send(*info->commSocket, "ok");
+                              if ((*pluginManager).runFun(buf, runFunInfo))
+                                    send(*info->commSocket, "ok");
                               else
-                                    send(info->commSocket, "failed");
-                              for (auto &data : runFunInfo.cus->data)
-                                    delete data;
-                              delete runFunInfo.cus;
+                                    send(*info->commSocket, "failed");
                               continue;
                         }
-                        for (auto &data : runFunInfo.cus->data)
-                              delete data;
-                        delete runFunInfo.cus;
-                        send(info->commSocket, "failed");
+                        send(*info->commSocket, "failed");
                         prlog->writeln("runFun failed");
                   }
             }
             else
             {
                   prlog->writeln("recv error:" + std::to_string(res) + " at:" + std::to_string(__LINE__));
-                  send(info->commSocket, "failed");
+                  send(*info->commSocket, "failed");
             }
       }
       return;
@@ -252,9 +247,9 @@ int main()
 {
       (*connectIp) = "0.0.0.0";
       connectPort = 6020;
-      g_log.setName("intermediator");
-      g_log << "program start" << endl;
-      PluginNamespace::loadPlugin(pluginManager, ".\\plugin\\");
+      (*g_log).setName("intermediator");
+      (*g_log) << "program start" << endl;
+      PluginNamespace::loadPlugin((*pluginManager), ".\\plugin\\");
       int res = initServer(*mainConnectSocket, g_wsaData, g_sockaddr, connectPort);
       healthyBeatThread = std::thread(healthyBeat);
       while (true)
@@ -264,7 +259,7 @@ int main()
             sockaddr_in aptsocketAddr = {0};
             int len = sizeof(aptsocketAddr);
             aptSocket = accept(*mainConnectSocket, (SOCKADDR *)&aptsocketAddr, &len);
-            g_log.writeln("accept a connect");
+            (*g_log).writeln("accept a connect");
             if (aptSocket != INVALID_SOCKET)
             {
                   recv(aptSocket, buf);
@@ -282,11 +277,11 @@ int main()
                         {
                               if (registerClient(aptSocket, wanIp, lanIp, systemKind, commit, SEID))
                               {
-                                    g_log.writeln("Register client,SEID:" + SEID +
-                                                  "\nwan ip:" + wanIp +
-                                                  "\nlan ip:" + lanIp +
-                                                  "\nsystemKind:" + (systemKind == 0 ? "Windows" : "Linux") +
-                                                  "\ncommit:" + commit);
+                                    (*g_log).writeln("Register client,SEID:" + SEID +
+                                                     "\nwan ip:" + wanIp +
+                                                     "\nlan ip:" + lanIp +
+                                                     "\nsystemKind:" + (systemKind == 0 ? "Windows" : "Linux") +
+                                                     "\ncommit:" + commit);
                                     send(aptSocket, "OK");
                                     send(aptSocket, SEID);
                               }
@@ -301,11 +296,11 @@ int main()
                         {
                               if (registerServer(aptSocket, wanIp, lanIp, systemKind, commit, SEID))
                               {
-                                    g_log.writeln("Register server,SEID:" + SEID +
-                                                  "\nwan ip:" + wanIp +
-                                                  "\nlan ip:" + lanIp +
-                                                  "\nsystemKind:" + (systemKind == 0 ? "Windows" : "Linux") +
-                                                  "\ncommit:" + commit);
+                                    (*g_log).writeln("Register server,SEID:" + SEID +
+                                                     "\nwan ip:" + wanIp +
+                                                     "\nlan ip:" + lanIp +
+                                                     "\nsystemKind:" + (systemKind == 0 ? "Windows" : "Linux") +
+                                                     "\ncommit:" + commit);
                                     send(aptSocket, "OK");
                                     send(aptSocket, SEID);
                                     serverThreadArry.push_back(std::thread(serverThread, SEID));
@@ -317,17 +312,17 @@ int main()
                               goto failRegister;
                         break;
                   case 'H': // Healthy socket connect
-                        if (ClientInfo.find(buf.substr(1)) != ClientInfo.end())
+                        if ((*ClientInfo).find(buf.substr(1)) != (*ClientInfo).end())
                         {
-                              g_log.writeln("Client healthy socket connect,SEID:" + buf.substr(1));
-                              ClientInfo[buf.substr(1)]->healthSocket = aptSocket;
+                              (*g_log).writeln("Client healthy socket connect,SEID:" + buf.substr(1));
+                              *(*ClientInfo)[buf.substr(1)]->healthSocket = aptSocket;
                               healthyBeatSOCKETList.push_back(healthyBeatInfoStruct(buf, aptSocket));
                               send(aptSocket, "OK");
                         }
-                        else if (ServerInfo.find(buf.substr(1)) != ServerInfo.end())
+                        else if ((*ServerInfo).find(buf.substr(1)) != (*ServerInfo).end())
                         {
-                              g_log.writeln("Server healthy socket connect,SEID:" + buf.substr(1));
-                              ServerInfo[buf.substr(1)]->healthSocket = aptSocket;
+                              (*g_log).writeln("Server healthy socket connect,SEID:" + buf.substr(1));
+                              *(*ServerInfo)[buf.substr(1)]->healthSocket = aptSocket;
                               healthyBeatSOCKETList.push_back(healthyBeatInfoStruct(buf, aptSocket, true));
                               send(aptSocket, "OK");
                         }

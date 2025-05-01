@@ -17,7 +17,7 @@ namespace PluginNamespace
       std::vector<std::string> traverseFiles(const std::wstring &rootDir, const std::wstring &compareSuffix);
       struct pluginInfo
       {
-            std::vector<void *> data;
+            std::vector<std::shared_ptr<void>> data;
       };
       using PluginInfo = Info<pluginInfo>;
       class pluginBase

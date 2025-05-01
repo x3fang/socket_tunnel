@@ -1,5 +1,6 @@
 #define initClientSocket_
 #include "include\globalDefine.h"
+#include "include\serverStruct.h"
 WSADATA g_wsaData;
 sockaddr_in g_sockaddr;
 std::thread healthyBeatThread;
@@ -49,7 +50,7 @@ void healthyBeat(SOCKET &sock)
 {
       while (DEBUG)
             ;
-      auto prlog = g_log.getFunLog("healthyBeat");
+      auto prlog = (*g_log).getFunLog("healthyBeat");
       int timeout = 3000;
       setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout, sizeof(timeout));
       setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, (char *)&timeout, sizeof(timeout));
@@ -80,18 +81,18 @@ std::vector<std::string> recvAndMatchPluginList(SOCKET &sock)
       while (buf != "end")
       {
             recv(*mainConnectSocket, buf);
-            if (buf != "end" && pluginManager.findFun(buf))
+            if (buf != "end" && (*pluginManager).findFun(buf))
                   pluginList.push_back(buf);
       }
       return pluginList;
 }
 int main()
 {
-      g_log.setName("client");
-      g_log.writeln("program start");
+      (*g_log).setName("client");
+      (*g_log).writeln("program start");
       *connectIp = "127.0.0.1";
       connectPort = 6020;
-      PluginNamespace::loadPlugin(pluginManager, std::string(".\\client_plugin\\"));
+      PluginNamespace::loadPlugin((*pluginManager), std::string(".\\client_plugin\\"));
       initClientSocket(g_wsaData, *mainConnectSocket, g_sockaddr, *connectIp, connectPort);
       std::string helloMsg = "C" + getLanIp() + "W" + "This is a Test!";
       while (connect(*mainConnectSocket, (sockaddr *)&g_sockaddr, sizeof(g_sockaddr)))
@@ -115,11 +116,14 @@ int main()
                         system("cls");
                         auto temp = recvAndMatchPluginList(*mainConnectSocket);
                         recv(*mainConnectSocket, buf);
-                        if (!buf.empty() && pluginManager.findFun(buf))
+                        if (!buf.empty() && (*pluginManager).findFun(buf))
                         {
-                              send(*mainConnectSocket, buf);
+                              send(*mainConnectSocket, "ok");
                               PluginInfo info;
-                              pluginManager.runFun(buf, info);
+                              std::shared_ptr<PluginInfoStruct> PInfo(new PluginInfoStruct);
+                              info.cus = std::make_shared<pluginInfo>();
+                              info.cus->data.push_back((std::shared_ptr<void>)PInfo);
+                              (*pluginManager).runFun(buf, info);
                         }
                   }
             }

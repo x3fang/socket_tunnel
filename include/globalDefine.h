@@ -25,18 +25,18 @@
 #define EXPORT __declspec(dllexport)
 #define SUCCESS_OPERAT 0
 using namespace logNameSpace;
-std::string *connectIp = new std::string();
+std::shared_ptr<std::string> connectIp(new std::string());
 int connectPort;
-SOCKET *mainConnectSocket = new SOCKET;
-SOCKET *healthySocket = new SOCKET;
-Log g_log;
+std::shared_ptr<SOCKET> mainConnectSocket(std::make_shared<SOCKET>());
+std::shared_ptr<SOCKET> healthySocket(std::make_shared<SOCKET>());
+std::shared_ptr<Log> g_log(std::make_shared<Log>());
 template <typename T>
 struct Info
 {
-      T *cus;
-      SOCKET *mainConnectSocket;
-      SOCKET *healthySocket;
-      std::string *connectIp;
+      std::shared_ptr<T> cus;
+      std::shared_ptr<SOCKET> mainConnectSocket;
+      std::shared_ptr<SOCKET> healthySocket;
+      std::shared_ptr<std::string> connectIp;
       int connectPort;
       Info()
           : mainConnectSocket(::mainConnectSocket), healthySocket(::healthySocket),
@@ -63,8 +63,8 @@ int send(SOCKET &sock, const std::string &data)
       std::string temp(std::to_string(data.length()) + "\r" + data);
       int res = send(sock, temp.c_str(), temp.size(), 0);
       if (res == SOCKET_ERROR)
-            return false;
-      return true;
+            return WSAGetLastError();
+      return SUCCESS_OPERAT;
 }
 int recv(SOCKET &sock, std::string &data)
 {
@@ -120,7 +120,7 @@ int initClientSocket(WSADATA &wsaData, SOCKET &sock, sockaddr_in &serverInfo, st
 }
 #endif
 #include "Plugin.h"
-PluginNamespace::PluginManager pluginManager;
+std::shared_ptr<PluginNamespace::PluginManager> pluginManager(std::make_shared<PluginNamespace::PluginManager>());
 using PluginNamespace::PluginInfo;
 using PluginNamespace::pluginInfo;
 #endif
