@@ -65,7 +65,7 @@ public:
                   std::stringstream ss(data);
                   auto pluginInfo = std::static_pointer_cast<PluginInfoStruct>(info.cus->data[0]);
                   if (send(*sock,
-                           (pluginInfo->delClient(data.substr(1))) ? "0" : "1") == SUCCESS_OPERAT)
+                           (pluginInfo->delClient(data.substr(1))) ? "succeed" : "failed") == SUCCESS_OPERAT)
                         return true;
                   else
                         return false;
@@ -87,6 +87,7 @@ public:
       {
             auto pluginInfo = std::static_pointer_cast<PluginInfoStruct>(info.cus->data[0]);
             auto funlog = pluginInfo->log->getFunLog("showClientRunFun");
+            funlog->writeln("start");
             auto sock = info.mainConnectSocket;
             std::string sendMsg;
             std::shared_ptr<Fliter> fliter;
@@ -98,6 +99,7 @@ public:
                   fliter->addRuleType("lanIp", EQUAL | NOT_EQUAL);
                   fliter->addRuleType("commit", EQUAL | NOT_EQUAL);
                   fliter->addRuleType("systemKind", EQUAL | NOT_EQUAL);
+                  funlog->writeln("from 1");
             }
             if (!fliter)
             {
@@ -107,40 +109,10 @@ public:
                   fliter->addRuleType("lanIp", EQUAL | NOT_EQUAL);
                   fliter->addRuleType("commit", EQUAL | NOT_EQUAL);
                   fliter->addRuleType("systemKind", EQUAL | NOT_EQUAL);
+                  funlog->writeln("from 2");
             }
             funlog->writeln(std::to_string(pluginInfo->ClientInfo->size()));
-            try
-            {
-                  for (auto it = (pluginInfo->ClientInfo)->begin(); it != (pluginInfo->ClientInfo)->end(); it++)
-                  {
-                        auto data = it->second.get();
-                        if ((fliter->matchRule("wanIp", (*data).wanIp) &&
-                             fliter->matchRule("lanIp", (*data).lanIp) &&
-                             fliter->matchRule("systemKind", std::to_string((*data).systemKind)) &&
-                             fliter->matchRule("commit", (*data).commit) &&
-                             fliter->matchRule("use", std::to_string(((*data).use ? 1 : 0)))))
-                        {
-                              sendMsg = (*data).wanIp + " " +
-                                        (*data).lanIp + " " +
-                                        std::to_string((*data).systemKind) + " " +
-                                        (*data).SEID + "\r\n" +
-                                        (*data).commit;
-                              int res = send(*sock, sendMsg);
-                              if (res != SUCCESS_OPERAT)
-                              {
-                                    funlog->writeln(("send error:" + std::to_string(WSAGetLastError())));
-                                    send(*sock, "end");
-                                    return false;
-                              }
-                        }
-                  }
-            }
-            catch (const std::exception &e)
-            {
-                  funlog->writeln(("ERROR:" + std::string(e.what())));
-            }
-            send(*sock, "end");
-            return true;
+            return sendOnce(sock, *(pluginInfo->ClientInfo), *fliter);
       }
       showClient()
       {
@@ -148,6 +120,35 @@ public:
             this->pluginName = "showClient";
             this->version = "1.0.0";
             this->author = "x3fang";
+      }
+
+private:
+      bool sendOnce(std::shared_ptr<SOCKET> &sock, std::map<std::string, std::shared_ptr<IndividualInfoStruct>> &infoMap, Fliter &fliter)
+      {
+            for (auto it = infoMap.begin(); it != infoMap.end(); it++)
+            {
+                  auto data = it->second.get();
+                  if ((fliter.matchRule("wanIp", (*data).wanIp) &&
+                       fliter.matchRule("lanIp", (*data).lanIp) &&
+                       fliter.matchRule("systemKind", std::to_string((*data).systemKind)) &&
+                       fliter.matchRule("commit", (*data).commit) &&
+                       fliter.matchRule("use", std::to_string(((*data).use ? 1 : 0)))))
+                  {
+                        std::string sendMsg((*data).wanIp + " " +
+                                            (*data).lanIp + " " +
+                                            std::to_string((*data).systemKind) + " " +
+                                            (*data).SEID + "\r\n" +
+                                            (*data).commit);
+                        int res = send(*sock, sendMsg);
+                        if (res != SUCCESS_OPERAT)
+                        {
+                              send(*sock, "end");
+                              return false;
+                        }
+                  }
+            }
+            send(*sock, "end");
+            return true;
       }
 };
 class connectClient : public PluginNamespace::pluginBase

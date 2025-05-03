@@ -56,7 +56,7 @@ public:
                   if (!intoConnect)
                         Sleep(800);
             }
-            system("pause");
+            getch();
             return true;
       }
       find()
@@ -77,7 +77,7 @@ public:
             std::string data;
             send(*sock, (*(std::string *)(std::static_pointer_cast<PluginInfoStruct>(info.cus->data[1]).get())));
             recv(*sock, data);
-            if (data == "failed") // false
+            if (data == "failed")
                   return false;
             else
                   return true;
@@ -128,6 +128,7 @@ public:
             info.cus->data.push_back((std::shared_ptr<void>)clientSEIDList);
             info.cus->data.push_back((std::shared_ptr<void>)(std::make_shared<int>(--outputNum)));
             std::cout << "Total: " << outputNum << std::endl;
+            getchar();
             return true;
       }
       showClient()

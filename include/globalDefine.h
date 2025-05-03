@@ -11,7 +11,7 @@
 
 #pragma comment(lib, "ws2_32.lib")
 #endif
-#define DEBUG 1
+#define DEBUG 0
 #include <algorithm>
 #include <cstring>
 #include <string>
