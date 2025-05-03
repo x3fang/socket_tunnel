@@ -9,40 +9,40 @@ public:
       bool runFun(PluginNamespace::PluginInfo &info) override
       {
             auto sock = info.mainConnectSocket;
+            auto pluginInfo = std::static_pointer_cast<std::shared_ptr<PluginInfoStruct>>(info.cus->data[0]);
             std::string data;
-            if (recv(*sock, data) == SUCCESS_OPERAT)
+            Fliter fliter;
+            fliter.addRuleType("use", EQUAL | NOT_EQUAL);
+            fliter.addRule("use", "0", EQUAL);
+
+            info.cus->data.push_back((std::shared_ptr<void>)(std::make_shared<Fliter>(fliter)));
+
+            while (true)
             {
-                  std::stringstream ss(data);
-                  auto pluginInfo = std::static_pointer_cast<std::shared_ptr<PluginInfoStruct>>(info.cus->data[0]);
-                  std::vector<std::string> sendData;
-                  sendData.push_back("0");
-                  if (data[0] == 'S')
+                  int res = recv(*sock, data);
+                  if (res == SUCCESS_OPERAT)
                   {
-                        for (auto &it : (*(*pluginInfo)->ServerInfo))
-                              if (it.second->lanIp == data.substr(1))
-                                    sendData.push_back(it.second->wanIp + " " +
-                                                       it.second->lanIp + " " +
-                                                       std::to_string(it.second->systemKind) + " " +
-                                                       it.second->SEID);
-                  }
-                  else if (data[0] == 'C')
-                  {
+                        if (data == "\r\nexit\r\n")
+                              break;
+                        std::stringstream ss(data);
+                        std::vector<std::string> sendData;
+                        sendData.push_back("0");
                         for (auto &it : (*(*pluginInfo)->ClientInfo))
-                              if (it.second->lanIp == data.substr(1))
+                              if (it.second->lanIp == data)
                                     sendData.push_back(it.second->wanIp + " " +
                                                        it.second->lanIp + " " +
                                                        std::to_string(it.second->systemKind) + " " +
-                                                       it.second->SEID);
+                                                       it.second->SEID + "\r" +
+                                                       it.second->commit);
+                        while (sendData.back() != "0")
+                        {
+                              if (send(*sock, sendData.back()) == SUCCESS_OPERAT)
+                                    sendData.pop_back();
+                        }
+                        send(*sock, "end");
                   }
-                  while (sendData.back() != "0")
-                  {
-                        if (send(*sock, sendData.back()) == SUCCESS_OPERAT)
-                              sendData.pop_back();
-                        else
-                              return false;
-                  }
-                  send(*sock, "end");
             }
+
             return false;
       }
       find()
@@ -113,18 +113,18 @@ public:
             {
                   for (auto it = (pluginInfo->ClientInfo)->begin(); it != (pluginInfo->ClientInfo)->end(); it++)
                   {
-                        auto data = *(it->second.get());
-                        if ((fliter->matchRule("wanIp", data.wanIp) &&
-                             fliter->matchRule("lanIp", data.lanIp) &&
-                             fliter->matchRule("systemKind", std::to_string(data.systemKind)) &&
-                             fliter->matchRule("commit", data.commit) &&
-                             fliter->matchRule("use", std::to_string((data.use ? 1 : 0)))))
+                        auto data = it->second.get();
+                        if ((fliter->matchRule("wanIp", (*data).wanIp) &&
+                             fliter->matchRule("lanIp", (*data).lanIp) &&
+                             fliter->matchRule("systemKind", std::to_string((*data).systemKind)) &&
+                             fliter->matchRule("commit", (*data).commit) &&
+                             fliter->matchRule("use", std::to_string(((*data).use ? 1 : 0)))))
                         {
-                              sendMsg = data.wanIp + " " +
-                                        data.lanIp + " " +
-                                        std::to_string(data.systemKind) + " " +
-                                        data.SEID + "\r\n" +
-                                        data.commit;
+                              sendMsg = (*data).wanIp + " " +
+                                        (*data).lanIp + " " +
+                                        std::to_string((*data).systemKind) + " " +
+                                        (*data).SEID + "\r\n" +
+                                        (*data).commit;
                               int res = send(*sock, sendMsg);
                               if (res != SUCCESS_OPERAT)
                               {
@@ -156,7 +156,6 @@ public:
       bool runFun(PluginNamespace::PluginInfo &info) override
       {
             bool status = true;
-
             auto pluginInfo = std::static_pointer_cast<PluginInfoStruct>(info.cus->data[0]);
             auto funlog = pluginInfo->log->getFunLog("connectClientRunFun");
             auto serverSock = info.mainConnectSocket;
@@ -173,7 +172,6 @@ public:
             {
                   pluginInfo->pluginManager->runFun("showClient", info);
                   int res = recv(*serverSock, data);
-                  funlog->writeln(("data:" + data));
                   if (res == SUCCESS_OPERAT)
                   {
                         if (data == "\r\nnext\r\n")
@@ -183,11 +181,12 @@ public:
                         else if (pluginInfo->ClientInfo->find(data) != pluginInfo->ClientInfo->end())
                         {
                               std::string clientSEID = data;
-                              pluginInfo->ClientInfo->at(data)->use = true;
+                              pluginInfo->ClientInfo->at(data)->Lock();
                               auto clientSock = pluginInfo->ClientInfo->at(data)->commSocket;
                               sendPluginList(*pluginInfo->pluginManager, *clientSock);
                               send(*clientSock, pluginName);
                               recv(*clientSock, data);
+
                               send(*serverSock, data);
                               if (data == "ok")
                               {
@@ -196,20 +195,17 @@ public:
                                     while (true)
                                     {
                                           data.clear();
-                                          if (recv(*serverSock, data) == SUCCESS_OPERAT)
-                                          {
-                                                if (data == "\r\nexit\r\n")
-                                                      break;
-                                          }
+                                          recv(*serverSock, data);
                                           send(*clientSock, data);
                                           recv(*clientSock, data);
+                                          funlog->writeln(data);
                                           send(*serverSock, data);
                                           if (data == "\r\n[exit]\r\n")
                                                 break;
                                     }
                               }
-                              pluginInfo->ClientInfo->at(clientSEID)->use = false;
                               data.clear();
+                              pluginInfo->ClientInfo->at(clientSEID)->unLock();
                         }
                         else
                               send(*serverSock, "failed");

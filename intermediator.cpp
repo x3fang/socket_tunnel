@@ -94,6 +94,8 @@ bool del(const std::string &SEID, std::map<std::string, std::shared_ptr<Individu
 {
       if ((*infoMap).find(SEID) != (*infoMap).end())
       {
+            (*(*infoMap)[SEID]).Lock();
+            (*(*infoMap)[SEID]).del = true;
             if (*(*infoMap)[SEID]->healthSocket != INVALID_SOCKET)
             {
                   send(*(*infoMap)[SEID]->healthSocket, "del");
@@ -103,6 +105,7 @@ bool del(const std::string &SEID, std::map<std::string, std::shared_ptr<Individu
             }
             closesocket(*(*infoMap)[SEID]->commSocket);
             *(*infoMap)[SEID]->commSocket = INVALID_SOCKET;
+            (*(*infoMap)[SEID]).unLock();
             (*infoMap).erase(SEID);
             return true;
       }
@@ -115,13 +118,13 @@ inline bool find(const std::string &SEID, std::shared_ptr<std::map<std::string, 
 bool delClient(const std::string &SEID)
 {
       static auto prlog = (*g_log).getFunLog("delClient");
-      prlog->writeln("SEID:" + SEID);
+      prlog->writeln("Del client's SEID:" + SEID);
       return del(SEID, &*ClientInfo);
 }
 bool delServer(const std::string &SEID)
 {
       static auto prlog = (*g_log).getFunLog("delServer");
-      prlog->writeln("SEID:" + SEID);
+      prlog->writeln("Del server's SEID:" + SEID);
       return del(SEID, &*ServerInfo);
 }
 bool arrangeRegister(const std::string &buf, std::string &lanIp_res, int &systemKind_res, std::string &commit_res)
@@ -188,14 +191,13 @@ void healthyBeat()
 }
 void serverThread(const std::string SEID)
 {
-      int si = 0;
-      si = 1;
       auto prlog = (*g_log).getFunLog("ST" + SEID);
       auto info = (*ServerInfo)[SEID];
       prlog->writeln("waiting for server healthy socket connect");
       while (*info->healthSocket == INVALID_SOCKET)
             ;
       prlog->writeln("server healthy socket connect success");
+      info->Lock();
       std::string buf;
       while (!ServerStopFlag)
       {
@@ -206,6 +208,7 @@ void serverThread(const std::string SEID)
                   if (buf.find("\r\nexit\r\n") != std::string::npos)
                   {
                         prlog->writeln("server exit");
+                        info->unLock();
                         delServer(SEID);
                         return;
                   }
@@ -241,6 +244,7 @@ void serverThread(const std::string SEID)
                   send(*info->commSocket, "failed");
             }
       }
+      info->unLock();
       return;
 }
 int main()

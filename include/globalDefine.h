@@ -18,6 +18,7 @@
 #include <map>
 #include <memory>
 #include <mutex>
+#include <condition_variable>
 #include <thread>
 #include <vector>
 #include <iostream>
@@ -68,10 +69,11 @@ int send(SOCKET &sock, const std::string &data)
 }
 int recv(SOCKET &sock, std::string &data)
 {
+      data.clear();
       try
       {
             std::string resData;
-            char buf[1024] = {0};
+            char buf[1028] = {0};
             int recvDataLength = 0;
             while (true)
             {
@@ -82,8 +84,16 @@ int recv(SOCKET &sock, std::string &data)
                   {
                         if (recvDataLength != 0)
                         {
-                              recv(sock, buf, recvDataLength, 0);
-                              data = buf;
+                              while (recvDataLength > 0)
+                              {
+                                    if (recvDataLength > 1024)
+                                          recv(sock, buf, 1024, 0);
+                                    else if (recvDataLength >= 0)
+                                          recv(sock, buf, recvDataLength, 0);
+                                    recvDataLength -= 1024;
+                                    data += buf;
+                                    memset(buf, 0, sizeof(buf));
+                              }
                               return SUCCESS_OPERAT;
                         }
                         return -1;

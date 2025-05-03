@@ -47,6 +47,7 @@ namespace logNameSpace
             funLog(const std::string &name, Log *log);
             void write(const std::string &msg);
             void writeln(const std::string &msg);
+            void writeln(const int &msg);
             void write(std::vector<std::string> &msg);
             funLog &operator<<(const std::string &msg);
             funLog &operator<<(const int &msg);
@@ -129,6 +130,11 @@ namespace logNameSpace
       {
             funlog->writeln(msg);
             log->writeln(msg);
+      }
+      void funLog::writeln(const int &msg)
+      {
+            funlog->writeln(std::to_string(msg));
+            log->writeln(std::to_string(msg));
       }
       void funLog::write(const std::string &msg)
       {

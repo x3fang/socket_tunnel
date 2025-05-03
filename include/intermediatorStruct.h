@@ -1,13 +1,32 @@
 #include "globalDefine.h"
 struct IndividualInfoStruct
 {
+      std::mutex valueLock;
+      std::condition_variable valueChange;
+      std::unique_lock<std::mutex> lock;
       bool use = false;
+      bool del = false;
       std::string wanIp;
       std::string lanIp;
       std::string SEID;
       int systemKind;
       std::string commit;
       std::shared_ptr<SOCKET> commSocket = nullptr, healthSocket = nullptr;
+      void Lock()
+      {
+            lock = std::unique_lock<std::mutex>(valueLock);
+            bool &inUse = use;
+            valueChange.wait(lock, [&inUse]
+                             { return !inUse; });
+
+            use = true;
+      }
+      void unLock()
+      {
+            use = false;
+            lock.unlock();
+            valueChange.notify_one();
+      }
       IndividualInfoStruct() = default;
       ~IndividualInfoStruct() = default;
       IndividualInfoStruct(const std::string SEID,
