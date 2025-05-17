@@ -1,0 +1,7 @@
+#ifndef SIGN_H
+#define SIGN_H
+#define SUCCESS_STATUS 0
+#define FAIL_STATUS 1
+#define PENDING_STATUS 2
+#define OTHER_THREAD_IS_PROCESSING_STATUS 3
+#endif

@@ -12,14 +12,17 @@ struct IndividualInfoStruct
       int systemKind;
       std::string commit;
       std::shared_ptr<SOCKET> commSocket = nullptr, healthSocket = nullptr;
-      void Lock()
+      int Lock()
       {
+            if (del)
+                  return SUCCESS_STATUS;
             lock = std::unique_lock<std::mutex>(valueLock);
             bool &inUse = use;
             valueChange.wait(lock, [&inUse]
-                             { return !inUse; });
+                             { return (!inUse ? true : false); });
 
             use = true;
+            return SUCCESS_STATUS;
       }
       void unLock()
       {
@@ -70,7 +73,7 @@ struct healthyBeatInfoStruct
       ~healthyBeatInfoStruct() = default;
       healthyBeatInfoStruct(const std::string &SEID_, SOCKET &healthSocket_, bool server_ = false) : SEID(SEID_), healthSocket(healthSocket_), server(server_) {}
 };
-typedef bool (*DelClient)(const std::string &);
+typedef int (*DelClient)(const std::string &);
 typedef bool (*Find)(const std::string &, std::shared_ptr<std::map<std::string, std::shared_ptr<IndividualInfoStruct>>>);
 struct PluginInfoStruct
 {

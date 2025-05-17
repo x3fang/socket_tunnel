@@ -11,8 +11,10 @@ std::thread healthyBeatThread;
 bool stopSign = false;
 void healthyBeat(SOCKET &sock)
 {
-      while (DEBUG)
+#ifdef DEBUG
+      while (true)
             ;
+#endif
       auto prlog = (*g_log).getFunLog("healthyBeat");
       int timeout = 3000;
       setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout, sizeof(timeout));

@@ -36,7 +36,7 @@ public:
                   while (true)
                   {
                         auto res = recv(*sock, recvData);
-                        if (res != SUCCESS_OPERAT)
+                        if (res != SUCCESS_STATUS)
                               return false;
                         if (recvData == "end")
                               break;

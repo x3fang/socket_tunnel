@@ -56,20 +56,20 @@ int initServer(SOCKET &ListenSocket, WSADATA &wsaData, sockaddr_in &sockAddr, in
             int errorCode = WSAGetLastError();
             return errorCode;
       }
-      return 0;
+      return SUCCESS_STATUS;
 }
 const std::string createSEID(const std::string &temp)
 {
       MD5::MD5 md5;
       return md5.encode(temp);
 }
-bool registerCOS(SOCKET socket,
-                 const std::string &wanIp,
-                 const std::string &lanIp,
-                 int systemKind,
-                 const std::string &commit,
-                 std::string &SEID_res,
-                 std::map<std::string, std::shared_ptr<IndividualInfoStruct>> &infoMap)
+int registerCOS(SOCKET socket,
+                const std::string &wanIp,
+                const std::string &lanIp,
+                int systemKind,
+                const std::string &commit,
+                std::string &SEID_res,
+                std::map<std::string, std::shared_ptr<IndividualInfoStruct>> &infoMap)
 {
       static auto prlog = (*g_log).getFunLog("registerCOS");
       std::string SEID = createSEID(lanIp + wanIp + std::to_string(systemKind) + commit);
@@ -78,23 +78,27 @@ bool registerCOS(SOCKET socket,
       {
             infoMap[SEID] = std::make_shared<IndividualInfoStruct>(SEID, wanIp, lanIp, systemKind, commit, socket, INVALID_SOCKET);
             SEID_res = SEID;
-            return true;
+            return SUCCESS_STATUS;
       }
-      return false;
+      return FAIL_STATUS;
 }
-inline bool registerClient(SOCKET socket, const std::string &wanIp, const std::string &lanIp, int systemKind, const std::string &commit, std::string &SEID_res)
+inline int registerClient(SOCKET socket, const std::string &wanIp, const std::string &lanIp, int systemKind, const std::string &commit, std::string &SEID_res)
 {
       return registerCOS(socket, wanIp, lanIp, systemKind, commit, SEID_res, *ClientInfo);
 }
-inline bool registerServer(SOCKET socket, const std::string &wanIp, const std::string &lanIp, int systemKind, const std::string &commit, std::string &SEID_res)
+inline int registerServer(SOCKET socket, const std::string &wanIp, const std::string &lanIp, int systemKind, const std::string &commit, std::string &SEID_res)
 {
       return registerCOS(socket, wanIp, lanIp, systemKind, commit, SEID_res, *ServerInfo);
 }
-bool del(const std::string &SEID, std::map<std::string, std::shared_ptr<IndividualInfoStruct>> *infoMap)
+int del(const std::string &SEID, std::map<std::string, std::shared_ptr<IndividualInfoStruct>> *infoMap)
 {
       if ((*infoMap).find(SEID) != (*infoMap).end())
       {
-            (*(*infoMap)[SEID]).Lock();
+            int status = (*(*infoMap)[SEID]).Lock();
+            if (status == OTHER_THREAD_IS_PROCESSING_STATUS)
+                  return OTHER_THREAD_IS_PROCESSING_STATUS;
+            else if (status != SUCCESS_STATUS)
+                  return status;
             (*(*infoMap)[SEID]).del = true;
             if (*(*infoMap)[SEID]->healthSocket != INVALID_SOCKET)
             {
@@ -107,27 +111,27 @@ bool del(const std::string &SEID, std::map<std::string, std::shared_ptr<Individu
             *(*infoMap)[SEID]->commSocket = INVALID_SOCKET;
             (*(*infoMap)[SEID]).unLock();
             (*infoMap).erase(SEID);
-            return true;
+            return SUCCESS_STATUS;
       }
-      return false;
+      return FAIL_STATUS;
 }
 inline bool find(const std::string &SEID, std::shared_ptr<std::map<std::string, std::shared_ptr<IndividualInfoStruct>>> infoMap)
 {
       return (*infoMap).find(SEID) != (*infoMap).end();
 }
-bool delClient(const std::string &SEID)
+int delClient(const std::string &SEID)
 {
       static auto prlog = (*g_log).getFunLog("delClient");
       prlog->writeln("Del client's SEID:" + SEID);
       return del(SEID, &*ClientInfo);
 }
-bool delServer(const std::string &SEID)
+int delServer(const std::string &SEID)
 {
       static auto prlog = (*g_log).getFunLog("delServer");
       prlog->writeln("Del server's SEID:" + SEID);
       return del(SEID, &*ServerInfo);
 }
-bool arrangeRegister(const std::string &buf, std::string &lanIp_res, int &systemKind_res, std::string &commit_res)
+int arrangeRegister(const std::string &buf, std::string &lanIp_res, int &systemKind_res, std::string &commit_res)
 {
       static auto prlog = (*g_log).getFunLog("arrangeRegister");
       prlog->writeln("buf:" + buf);
@@ -145,9 +149,9 @@ bool arrangeRegister(const std::string &buf, std::string &lanIp_res, int &system
             commit = buf.substr(LSS + 1);
             commit_res = commit;
             systemKind_res = systemKind;
-            return true;
+            return SUCCESS_STATUS;
       }
-      return false;
+      return FAIL_STATUS;
 }
 void sendPluginList(PluginNamespace::PluginManager &pluginManager, SOCKET &sock)
 {
@@ -159,8 +163,10 @@ void sendPluginList(PluginNamespace::PluginManager &pluginManager, SOCKET &sock)
 }
 void healthyBeat()
 {
-      while (DEBUG)
+#ifdef DEBUG
+      while (true)
             ;
+#endif
       static auto prlog = (*g_log).getFunLog("healthyBeat");
       std::default_random_engine e;
       e.seed(time(0));
@@ -197,13 +203,14 @@ void serverThread(const std::string SEID)
       while (*info->healthSocket == INVALID_SOCKET)
             ;
       prlog->writeln("server healthy socket connect success");
-      info->Lock();
+      if (!info->Lock())
+            return;
       std::string buf;
       while (!ServerStopFlag)
       {
             sendPluginList(*pluginManager, *info->commSocket);
             int res = recv(*info->commSocket, buf);
-            if (res == SUCCESS_OPERAT)
+            if (res == SUCCESS_STATUS)
             {
                   if (buf.find("\r\nexit\r\n") != std::string::npos)
                   {

@@ -11,7 +11,7 @@
 
 #pragma comment(lib, "ws2_32.lib")
 #endif
-#define DEBUG 0
+// #define DEBUG //if define it,healthy Beat won't work
 #include <algorithm>
 #include <cstring>
 #include <string>
@@ -22,15 +22,48 @@
 #include <thread>
 #include <vector>
 #include <iostream>
+#include "sign.h"
 #include "log.h"
 #define EXPORT __declspec(dllexport)
-#define SUCCESS_OPERAT 0
 using namespace logNameSpace;
 std::shared_ptr<std::string> connectIp(new std::string());
 int connectPort;
 std::shared_ptr<SOCKET> mainConnectSocket(std::make_shared<SOCKET>());
 std::shared_ptr<SOCKET> healthySocket(std::make_shared<SOCKET>());
 std::shared_ptr<Log> g_log(std::make_shared<Log>());
+std::atomic<bool> isUse(false);
+struct infoLock
+{
+private:
+      std::mutex valueLock;
+      std::condition_variable valueChange;
+      std::unique_lock<std::mutex> lock;
+      bool use = false;
+      bool del = false;
+
+public:
+      void setDel(bool del)
+      {
+            this->del = del;
+      }
+      bool Lock()
+      {
+            if (del)
+                  return true;
+            lock = std::unique_lock<std::mutex>(valueLock);
+            bool &inUse = use;
+            valueChange.wait(lock, [&inUse]
+                             { return !inUse; });
+
+            use = true;
+      }
+      void unLock()
+      {
+            use = false;
+            lock.unlock();
+            valueChange.notify_one();
+      }
+};
 template <typename T>
 struct Info
 {
@@ -65,7 +98,7 @@ int send(SOCKET &sock, const std::string &data)
       int res = send(sock, temp.c_str(), temp.size(), 0);
       if (res == SOCKET_ERROR)
             return WSAGetLastError();
-      return SUCCESS_OPERAT;
+      return SUCCESS_STATUS;
 }
 int recv(SOCKET &sock, std::string &data)
 {
@@ -94,7 +127,7 @@ int recv(SOCKET &sock, std::string &data)
                                     data += buf;
                                     memset(buf, 0, sizeof(buf));
                               }
-                              return SUCCESS_OPERAT;
+                              return SUCCESS_STATUS;
                         }
                         return -1;
                   }
@@ -126,7 +159,7 @@ int initClientSocket(WSADATA &wsaData, SOCKET &sock, sockaddr_in &serverInfo, st
       serverInfo.sin_family = AF_INET;
       serverInfo.sin_addr.s_addr = inet_addr(serverIP.c_str());
       serverInfo.sin_port = htons(serverPort);
-      return 0;
+      return SUCCESS_STATUS;
 }
 #endif
 #include "Plugin.h"

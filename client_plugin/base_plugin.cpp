@@ -7,7 +7,7 @@ public:
       bool runFun(PluginNamespace::PluginInfo &info) override
       {
             auto pluginInfo = std::static_pointer_cast<PluginInfoStruct>(info.cus->data[0]);
-            return (open_telnet(*info.mainConnectSocket) == SUCCESS_OPERAT);
+            return (open_telnet(*info.mainConnectSocket) == SUCCESS_STATUS);
       }
       connectClient()
       {
@@ -82,7 +82,7 @@ private:
             // 关闭进程句柄
             CloseHandle(Processinfo.hProcess);
             CloseHandle(Processinfo.hThread);
-            return SUCCESS_OPERAT;
+            return SUCCESS_STATUS;
       }
       std::pair<std::string, DWORD> readPipeALLData(HANDLE outputRead, int timeout_ms = 100)
       {

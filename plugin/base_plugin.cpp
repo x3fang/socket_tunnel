@@ -20,7 +20,7 @@ public:
             while (true)
             {
                   int res = recv(*sock, data);
-                  if (res == SUCCESS_OPERAT)
+                  if (res == SUCCESS_STATUS)
                   {
                         if (data == "\r\nexit\r\n")
                               break;
@@ -36,7 +36,7 @@ public:
                                                        it.second->commit);
                         while (sendData.back() != "0")
                         {
-                              if (send(*sock, sendData.back()) == SUCCESS_OPERAT)
+                              if (send(*sock, sendData.back()) == SUCCESS_STATUS)
                                     sendData.pop_back();
                         }
                         send(*sock, "end");
@@ -60,12 +60,12 @@ public:
       {
             auto sock = info.mainConnectSocket;
             std::string data;
-            if (recv(*sock, data) == SUCCESS_OPERAT)
+            if (recv(*sock, data) == SUCCESS_STATUS)
             {
                   std::stringstream ss(data);
                   auto pluginInfo = std::static_pointer_cast<PluginInfoStruct>(info.cus->data[0]);
                   if (send(*sock,
-                           (pluginInfo->delClient(data.substr(1))) ? "succeed" : "failed") == SUCCESS_OPERAT)
+                           (pluginInfo->delClient(data.substr(1))) ? "succeed" : "failed") == SUCCESS_STATUS)
                         return true;
                   else
                         return false;
@@ -140,7 +140,7 @@ private:
                                             (*data).SEID + "\r\n" +
                                             (*data).commit);
                         int res = send(*sock, sendMsg);
-                        if (res != SUCCESS_OPERAT)
+                        if (res != SUCCESS_STATUS)
                         {
                               send(*sock, "end");
                               return false;
@@ -173,7 +173,7 @@ public:
             {
                   pluginInfo->pluginManager->runFun("showClient", info);
                   int res = recv(*serverSock, data);
-                  if (res == SUCCESS_OPERAT)
+                  if (res == SUCCESS_STATUS)
                   {
                         if (data == "\r\nnext\r\n")
                               continue;
