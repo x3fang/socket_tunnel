@@ -121,10 +121,10 @@ int main()
                         if (!buf.empty() && (*pluginManager).findFun(buf))
                         {
                               send(*mainConnectSocket, "ok");
-                              PluginInfo info;
+                              Info info;
                               std::shared_ptr<PluginInfoStruct> PInfo(new PluginInfoStruct);
-                              info.cus = std::make_shared<pluginInfo>();
-                              info.cus->data.push_back((std::shared_ptr<void>)PInfo);
+                              info.customize_data.push_back(std::make_shared<programPluginInfoStruct>());
+                              info.customize_data.push_back((std::shared_ptr<void>)PInfo);
                               (*pluginManager).runFun(buf, info);
                         }
                   }

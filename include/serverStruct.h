@@ -10,7 +10,12 @@ struct PluginInfoStruct
             this->pluginManager = other.pluginManager;
             this->log = other.log;
       }
+      PluginInfoStruct(std::shared_ptr<PluginNamespace::PluginManager> _pluginManager, std::shared_ptr<Log> _log)
+      {
+            this->pluginManager = _pluginManager;
+            this->log = _log;
+      }
       ~PluginInfoStruct() = default;
       PluginInfoStruct() : pluginManager(::pluginManager),
-                           log(g_log) {}
+                           log(::g_log) {}
 };

@@ -11,7 +11,7 @@
 
 #pragma comment(lib, "ws2_32.lib")
 #endif
-// #define DEBUG //if define it,healthy Beat won't work
+#define DEBUG // if define it,healthy Beat won't work
 #include <algorithm>
 #include <cstring>
 #include <string>
@@ -26,7 +26,7 @@
 #include "log.h"
 #define EXPORT __declspec(dllexport)
 using namespace logNameSpace;
-std::shared_ptr<std::string> connectIp(new std::string());
+std::shared_ptr<std::string> connectIp(std::make_shared<std::string>());
 int connectPort;
 std::shared_ptr<SOCKET> mainConnectSocket(std::make_shared<SOCKET>());
 std::shared_ptr<SOCKET> healthySocket(std::make_shared<SOCKET>());
@@ -46,50 +46,23 @@ public:
       {
             this->del = del;
       }
-      bool Lock()
+      int waitLock()
       {
             if (del)
-                  return true;
+                  return WILL_DEL_STATUS;
             lock = std::unique_lock<std::mutex>(valueLock);
             bool &inUse = use;
             valueChange.wait(lock, [&inUse]
                              { return !inUse; });
 
             use = true;
+            return SUCCESS_STATUS;
       }
       void unLock()
       {
             use = false;
             lock.unlock();
             valueChange.notify_one();
-      }
-};
-template <typename T>
-struct Info
-{
-      std::shared_ptr<T> cus;
-      std::shared_ptr<SOCKET> mainConnectSocket;
-      std::shared_ptr<SOCKET> healthySocket;
-      std::shared_ptr<std::string> connectIp;
-      int connectPort;
-      Info()
-          : mainConnectSocket(::mainConnectSocket), healthySocket(::healthySocket),
-            connectIp(::connectIp), connectPort(::connectPort) {}
-      Info(const T &a_cus)
-          : cus(a_cus), mainConnectSocket(::mainConnectSocket),
-            healthySocket(::healthySocket), connectIp(::connectIp),
-            connectPort(::connectIp) {}
-      Info(const Info &other)
-          : cus(other.cus), mainConnectSocket(other.mainConnectSocket),
-            healthySocket(other.healthySocket), connectIp(other.connectIp),
-            connectPort(other.connectIp) {}
-      Info &operator=(const Info &other)
-      {
-            *this.cus = other.cus;
-            *this.connectIp = other.connectIp;
-            *this.connectPort = other.connectPort;
-            *this.mainConnectSocket = other.mainConnectSocket;
-            *this.healthySocket = other.healthySocket;
       }
 };
 int send(SOCKET &sock, const std::string &data)
@@ -163,7 +136,7 @@ int initClientSocket(WSADATA &wsaData, SOCKET &sock, sockaddr_in &serverInfo, st
 }
 #endif
 #include "Plugin.h"
+#include "programPluginInfo.h"
 std::shared_ptr<PluginNamespace::PluginManager> pluginManager(std::make_shared<PluginNamespace::PluginManager>());
-using PluginNamespace::PluginInfo;
-using PluginNamespace::pluginInfo;
+using PluginNamespace::Info;
 #endif

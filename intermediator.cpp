@@ -94,7 +94,7 @@ int del(const std::string &SEID, std::map<std::string, std::shared_ptr<Individua
 {
       if ((*infoMap).find(SEID) != (*infoMap).end())
       {
-            int status = (*(*infoMap)[SEID]).Lock();
+            int status = (*(*infoMap)[SEID]).waitLock();
             if (status == OTHER_THREAD_IS_PROCESSING_STATUS)
                   return OTHER_THREAD_IS_PROCESSING_STATUS;
             else if (status != SUCCESS_STATUS)
@@ -134,7 +134,6 @@ int delServer(const std::string &SEID)
 int arrangeRegister(const std::string &buf, std::string &lanIp_res, int &systemKind_res, std::string &commit_res)
 {
       static auto prlog = (*g_log).getFunLog("arrangeRegister");
-      prlog->writeln("buf:" + buf);
       int LSS = buf.find_first_not_of("0123456789.", 1); // lanIp and system kinds separator
       std::string lanIP = buf.substr(1, LSS - 1);
       if (!lanIP.empty() &&
@@ -150,6 +149,11 @@ int arrangeRegister(const std::string &buf, std::string &lanIp_res, int &systemK
             commit_res = commit;
             systemKind_res = systemKind;
             return SUCCESS_STATUS;
+      }
+      else
+      {
+            prlog->writeln("failed to arrange data");
+            prlog->writeln("data: " + buf);
       }
       return FAIL_STATUS;
 }
@@ -168,14 +172,14 @@ void healthyBeat()
             ;
 #endif
       static auto prlog = (*g_log).getFunLog("healthyBeat");
-      std::default_random_engine e;
-      e.seed(time(0));
+      std::default_random_engine random_engine;
+      random_engine.seed(time(0));
       std::string buf;
       while (!ServerStopFlag)
       {
             if (!healthyBeatSOCKETList.empty())
             {
-                  auto radom = e();
+                  auto radom = random_engine();
                   for (auto &healthyInfo : healthyBeatSOCKETList)
                   {
                         int timeout = 3000;
@@ -197,13 +201,13 @@ void healthyBeat()
 }
 void serverThread(const std::string SEID)
 {
-      auto prlog = (*g_log).getFunLog("ST" + SEID);
+      auto prlog = (*g_log).getFunLog("Server-SEID:" + SEID);
       auto info = (*ServerInfo)[SEID];
       prlog->writeln("waiting for server healthy socket connect");
       while (*info->healthSocket == INVALID_SOCKET)
             ;
       prlog->writeln("server healthy socket connect success");
-      if (!info->Lock())
+      if (info->waitLock() != SUCCESS_STATUS)
             return;
       std::string buf;
       while (!ServerStopFlag)
@@ -223,18 +227,24 @@ void serverThread(const std::string SEID)
                   {
                         prlog->writeln("plugin name:" + buf);
                         std::shared_ptr<PluginInfoStruct> PInfo(new PluginInfoStruct);
+                        (*PInfo).log = ::g_log;
+                        (*PInfo).pluginManager = ::pluginManager;
                         (*PInfo).ClientInfo = ::ClientInfo;
                         (*PInfo).ServerInfo = ::ServerInfo;
                         (*PInfo).find = ::find;
                         (*PInfo).delClient = ::delClient;
-                        PluginInfo runFunInfo;
-                        runFunInfo.cus = std::make_shared<pluginInfo>();
-                        runFunInfo.cus->data.push_back((std::shared_ptr<void>)PInfo);
-                        runFunInfo.mainConnectSocket = info->commSocket;
-                        runFunInfo.healthySocket = info->healthSocket;
+
+                        Info runFunInfo;
+
+                        auto pluginInfoTemp = std::make_shared<programPluginInfoStruct>();
+                        (*pluginInfoTemp).mainConnectSocket = info->commSocket;
+                        (*pluginInfoTemp).healthySocket = info->healthSocket;
+
+                        runFunInfo.customize_data.push_back(pluginInfoTemp);
+                        runFunInfo.customize_data.push_back((std::shared_ptr<void>)PInfo);
                         if ((*pluginManager).findFun(buf))
                         {
-                              send(*info->commSocket, "ok");
+                              send(*info->commSocket, "success");
                               if ((*pluginManager).runFun(buf, runFunInfo))
                                     send(*info->commSocket, "ok");
                               else
@@ -256,26 +266,49 @@ void serverThread(const std::string SEID)
 }
 int main()
 {
+#ifdef DEBUG
+      (*g_log).setDetailLevel(logNameSpace::Log::detailLevelEnum::debug);
+#else
+      (*g_log).setDetailLevel(logNameSpace::Log::detailLevelEnum::release);
+#endif
+
       (*connectIp) = "0.0.0.0";
       connectPort = 6020;
       (*g_log).setName("intermediator");
-      (*g_log) << "program start" << endl;
-      PluginNamespace::loadPlugin((*pluginManager), ".\\plugin\\");
-      int res = initServer(*mainConnectSocket, g_wsaData, g_sockaddr, connectPort);
+      (*g_log).writeln("initializing program");
+
+      (*g_log).writeln("load plugin");
+      int res = PluginNamespace::loadPlugin((*pluginManager), ".\\plugin\\");
+      (*g_log).writeln("load" + std::to_string(res) + "plugin");
+
+      (*g_log).writeln("init server");
+      res = initServer(*mainConnectSocket, g_wsaData, g_sockaddr, connectPort);
+      if (res != SUCCESS_STATUS)
+      {
+            (*g_log).writeln("initServer error");
+            return -1;
+      }
+      (*g_log).writeln("init server success");
+
       healthyBeatThread = std::thread(healthyBeat);
+      (*g_log).writeln("created healthyBeat");
       while (true)
       {
             std::string buf;
             SOCKET aptSocket;
             sockaddr_in aptsocketAddr = {0};
             int len = sizeof(aptsocketAddr);
+
+            (*g_log).writeln("waiting for connect");
             aptSocket = accept(*mainConnectSocket, (SOCKADDR *)&aptsocketAddr, &len);
             (*g_log).writeln("accept a connect");
+
             if (aptSocket != INVALID_SOCKET)
             {
                   recv(aptSocket, buf);
                   if (buf.length() <= 1)
                   {
+                        (*g_log).writeln("invalid connect");
                         closesocket(aptSocket);
                         continue;
                   }
@@ -284,11 +317,11 @@ int main()
                   switch (buf[0])
                   {
                   case 'C': // Client
-                        if (arrangeRegister(buf, lanIp, systemKind, commit))
+                        if (arrangeRegister(buf, lanIp, systemKind, commit) == SUCCESS_STATUS)
                         {
-                              if (registerClient(aptSocket, wanIp, lanIp, systemKind, commit, SEID))
+                              if (registerClient(aptSocket, wanIp, lanIp, systemKind, commit, SEID) == SUCCESS_STATUS)
                               {
-                                    (*g_log).writeln("Register client,SEID:" + SEID +
+                                    (*g_log).writeln("\nRegister client,SEID:" + SEID +
                                                      "\nwan ip:" + wanIp +
                                                      "\nlan ip:" + lanIp +
                                                      "\nsystemKind:" + (systemKind == 0 ? "Windows" : "Linux") +
@@ -303,11 +336,11 @@ int main()
                               goto failRegister;
                         break;
                   case 'S': // Server
-                        if (arrangeRegister(buf, lanIp, systemKind, commit))
+                        if (arrangeRegister(buf, lanIp, systemKind, commit) == SUCCESS_STATUS)
                         {
-                              if (registerServer(aptSocket, wanIp, lanIp, systemKind, commit, SEID))
+                              if (registerServer(aptSocket, wanIp, lanIp, systemKind, commit, SEID) == SUCCESS_STATUS)
                               {
-                                    (*g_log).writeln("Register server,SEID:" + SEID +
+                                    (*g_log).writeln("\nRegister server,SEID:" + SEID +
                                                      "\nwan ip:" + wanIp +
                                                      "\nlan ip:" + lanIp +
                                                      "\nsystemKind:" + (systemKind == 0 ? "Windows" : "Linux") +
@@ -341,6 +374,7 @@ int main()
                               goto failRegister;
                         break;
                   failRegister:
+                        (*g_log).writeln("Register fail");
                         send(aptSocket, "FAIL");
                         closesocket(aptSocket);
                   }

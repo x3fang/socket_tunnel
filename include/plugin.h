@@ -12,14 +12,28 @@
 #include <queue>
 #include <iostream>
 #include "globalDefine.h"
+
 namespace PluginNamespace
 {
       std::vector<std::string> traverseFiles(const std::wstring &rootDir, const std::wstring &compareSuffix);
-      struct pluginInfo
+      struct Info
       {
-            std::vector<std::shared_ptr<void>> data;
+      private:
+            using data_type = std::vector<std::shared_ptr<void>>;
+
+      public:
+            data_type customize_data;
+            Info() = default;
+            Info(const data_type &n_data)
+                : customize_data(n_data) {}
+            Info(const Info &other)
+                : customize_data(other.customize_data) {}
+            inline Info &operator=(const Info &other)
+            {
+                  customize_data = other.customize_data;
+                  return *this;
+            }
       };
-      using PluginInfo = Info<pluginInfo>;
       class pluginBase
       {
       public:
@@ -31,7 +45,7 @@ namespace PluginNamespace
             inline const std::string getversion(void) const { return this->version; }
             inline const std::string getpluginName(void) const { return this->pluginName; }
 
-            virtual bool runFun(PluginInfo &info) = 0;
+            virtual bool runFun(Info &info) = 0;
             bool used = false;
 
       protected:
@@ -60,7 +74,7 @@ namespace PluginNamespace
                   else // found same name plugin
                         return std::pair<bool, const std::string>(false, pluginAuthor);
             }
-            bool runFun(const std::string &funName, PluginInfo &info)
+            bool runFun(const std::string &funName, Info &info)
             {
                   if (findFun(funName) && pluginFunList[funName]->used)
                         return pluginFunList[funName]->runFun(info);
@@ -112,9 +126,9 @@ namespace PluginNamespace
             std::map<std::string, pluginBase *> pluginFunList;
 
       private:
-            bool runFun(PluginInfo &info) override
+            bool runFun(Info &info) override
             {
-                  std::cout << "HELLO,BUG";
+                  throw "Error at PluginManager::runFun,line:" + __LINE__;
                   return true;
             }
       };

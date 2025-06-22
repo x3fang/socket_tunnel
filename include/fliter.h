@@ -89,7 +89,7 @@ Fliter::Fliter(void *p)
 }
 bool Fliter::addRuleType(const std::string &ruleTypeName, const std::bitset<optNum> typeSupportOpt)
 {
-      if (this->findRuleType(ruleTypeName))
+      if (this->findRuleType(ruleTypeName) || ruleTypeName.empty())
             return false;
       ruleTypeNode temp(typeSupportOpt[0] || typeSupportOpt[1] || typeSupportOpt[2] || typeSupportOpt[3],
                         typeSupportOpt);
@@ -97,7 +97,7 @@ bool Fliter::addRuleType(const std::string &ruleTypeName, const std::bitset<optN
 }
 bool Fliter::addRuleType(const std::string &ruleTypeName, const std::string &typeSupportOpt)
 {
-      if (this->findRuleType(ruleTypeName))
+      if (this->findRuleType(ruleTypeName) || ruleTypeName.empty())
             return false;
       ruleTypeNode temp(typeSupportOpt[0] == '1' || typeSupportOpt[1] == '1' || typeSupportOpt[2] == '1' || typeSupportOpt[3] == '1',
                         std::bitset<optNum>(typeSupportOpt));

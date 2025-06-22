@@ -6,16 +6,13 @@
 class find : public PluginNamespace::pluginBase
 {
 public:
-      bool runFun(PluginNamespace::PluginInfo &info) override
+      bool runFun(PluginNamespace::Info &info) override
       {
-            auto sock = info.mainConnectSocket;
-            auto pluginInfo = std::static_pointer_cast<std::shared_ptr<PluginInfoStruct>>(info.cus->data[0]);
+            std::shared_ptr<programPluginInfoStruct> &funInfo = (std::shared_ptr<programPluginInfoStruct> &)(info.customize_data[0]);
+            std::shared_ptr<PluginInfoStruct> &pluginInfo = (std::shared_ptr<PluginInfoStruct> &)(info.customize_data[1]);
+            std::shared_ptr<SOCKET> sock = funInfo->mainConnectSocket;
+            auto clientInfo = pluginInfo->ClientInfo;
             std::string data;
-            Fliter fliter;
-            fliter.addRuleType("use", EQUAL | NOT_EQUAL);
-            fliter.addRule("use", "0", EQUAL);
-
-            info.cus->data.push_back((std::shared_ptr<void>)(std::make_shared<Fliter>(fliter)));
 
             while (true)
             {
@@ -27,7 +24,7 @@ public:
                         std::stringstream ss(data);
                         std::vector<std::string> sendData;
                         sendData.push_back("0");
-                        for (auto &it : (*(*pluginInfo)->ClientInfo))
+                        for (auto &it : (*clientInfo))
                               if (it.second->lanIp == data)
                                     sendData.push_back(it.second->wanIp + " " +
                                                        it.second->lanIp + " " +
@@ -56,16 +53,21 @@ public:
 class delClient : public PluginNamespace::pluginBase
 {
 public:
-      bool runFun(PluginNamespace::PluginInfo &info) override
+      bool runFun(PluginNamespace::Info &info) override
       {
-            auto sock = info.mainConnectSocket;
+            std::shared_ptr<programPluginInfoStruct> &funInfo = (std::shared_ptr<programPluginInfoStruct> &)(info.customize_data[0]);
+            std::shared_ptr<PluginInfoStruct> &pluginInfo = (std::shared_ptr<PluginInfoStruct> &)(info.customize_data[1]);
+            std::shared_ptr<SOCKET> sock = funInfo->mainConnectSocket;
+            auto clientInfo = pluginInfo->ClientInfo;
             std::string data;
-            if (recv(*sock, data) == SUCCESS_STATUS)
+            if (recv(*sock, data) == SUCCESS_STATUS) // recv client SEID
             {
                   std::stringstream ss(data);
-                  auto pluginInfo = std::static_pointer_cast<PluginInfoStruct>(info.cus->data[0]);
                   if (send(*sock,
-                           (pluginInfo->delClient(data.substr(1))) ? "succeed" : "failed") == SUCCESS_STATUS)
+                           (((std::shared_ptr<PluginInfoStruct> &)(info.customize_data[1]))
+                                ->delClient(data.substr(1))) // run delClient
+                               ? "succeed"
+                               : "failed") == SUCCESS_STATUS)
                         return true;
                   else
                         return false;
@@ -83,23 +85,24 @@ public:
 class showClient : public PluginNamespace::pluginBase
 {
 public:
-      bool runFun(PluginNamespace::PluginInfo &info) override
+      bool runFun(PluginNamespace::Info &info) override
       {
-            auto pluginInfo = std::static_pointer_cast<PluginInfoStruct>(info.cus->data[0]);
+            std::shared_ptr<programPluginInfoStruct> &funInfo = (std::shared_ptr<programPluginInfoStruct> &)(info.customize_data[0]);
+            std::shared_ptr<PluginInfoStruct> &pluginInfo = (std::shared_ptr<PluginInfoStruct> &)(info.customize_data[1]);
+            std::shared_ptr<SOCKET> sock = funInfo->mainConnectSocket;
+            auto clientInfo = pluginInfo->ClientInfo;
+
             auto funlog = pluginInfo->log->getFunLog("showClientRunFun");
-            funlog->writeln("start");
-            auto sock = info.mainConnectSocket;
             std::string sendMsg;
             std::shared_ptr<Fliter> fliter;
-            if (info.cus->data.size() >= 2)
+            if (info.customize_data.size() >= 3)
             {
-                  fliter = std::static_pointer_cast<Fliter>(info.cus->data[1]);
+                  fliter = std::static_pointer_cast<Fliter>(info.customize_data[2]);
                   fliter->addRuleType("use", EQUAL | NOT_EQUAL);
                   fliter->addRuleType("wanIp", EQUAL | NOT_EQUAL);
                   fliter->addRuleType("lanIp", EQUAL | NOT_EQUAL);
                   fliter->addRuleType("commit", EQUAL | NOT_EQUAL);
                   fliter->addRuleType("systemKind", EQUAL | NOT_EQUAL);
-                  funlog->writeln("from 1");
             }
             if (!fliter)
             {
@@ -109,7 +112,6 @@ public:
                   fliter->addRuleType("lanIp", EQUAL | NOT_EQUAL);
                   fliter->addRuleType("commit", EQUAL | NOT_EQUAL);
                   fliter->addRuleType("systemKind", EQUAL | NOT_EQUAL);
-                  funlog->writeln("from 2");
             }
             funlog->writeln(std::to_string(pluginInfo->ClientInfo->size()));
             return sendOnce(sock, *(pluginInfo->ClientInfo), *fliter);
@@ -154,24 +156,26 @@ private:
 class connectClient : public PluginNamespace::pluginBase
 {
 public:
-      bool runFun(PluginNamespace::PluginInfo &info) override
+      bool runFun(PluginNamespace::Info &info) override
       {
+            std::shared_ptr<programPluginInfoStruct> &funInfo = (std::shared_ptr<programPluginInfoStruct> &)(info.customize_data[0]);
+            std::shared_ptr<PluginInfoStruct> &pluginInfo = (std::shared_ptr<PluginInfoStruct> &)(info.customize_data[1]);
+            std::shared_ptr<SOCKET> serverSock = funInfo->mainConnectSocket;
+            auto clientInfo = pluginInfo->ClientInfo;
             bool status = true;
-            auto pluginInfo = std::static_pointer_cast<PluginInfoStruct>(info.cus->data[0]);
             auto funlog = pluginInfo->log->getFunLog("connectClientRunFun");
-            auto serverSock = info.mainConnectSocket;
 
             std::string data;
 
             Fliter fliter;
             fliter.addRuleType("use", EQUAL | NOT_EQUAL);
             fliter.addRule("use", "0", EQUAL);
-
-            info.cus->data.push_back((std::shared_ptr<void>)(std::make_shared<Fliter>(fliter)));
+            auto showClientInfo = info;
+            showClientInfo.customize_data.push_back((std::shared_ptr<void>)(std::make_shared<Fliter>(fliter)));
 
             while (true)
             {
-                  pluginInfo->pluginManager->runFun("showClient", info);
+                  pluginInfo->pluginManager->runFun("showClient", showClientInfo);
                   int res = recv(*serverSock, data);
                   if (res == SUCCESS_STATUS)
                   {
@@ -182,7 +186,7 @@ public:
                         else if (pluginInfo->ClientInfo->find(data) != pluginInfo->ClientInfo->end())
                         {
                               std::string clientSEID = data;
-                              pluginInfo->ClientInfo->at(data)->Lock();
+                              pluginInfo->ClientInfo->at(data)->waitLock();
                               auto clientSock = pluginInfo->ClientInfo->at(data)->commSocket;
                               sendPluginList(*pluginInfo->pluginManager, *clientSock);
                               send(*clientSock, pluginName);

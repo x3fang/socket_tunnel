@@ -12,7 +12,7 @@ struct IndividualInfoStruct
       int systemKind;
       std::string commit;
       std::shared_ptr<SOCKET> commSocket = nullptr, healthSocket = nullptr;
-      int Lock()
+      int waitLock()
       {
             if (del)
                   return SUCCESS_STATUS;
@@ -105,11 +105,8 @@ struct PluginInfoStruct
       {
             PluginInfoStruct *temp = (PluginInfoStruct *)(other.get());
             this->ClientInfo = temp->ClientInfo;
-            std::cerr << 1;
             this->ServerInfo = temp->ServerInfo;
-            std::cerr << 1;
             this->delClient = temp->delClient;
-            std::cerr << 1;
             this->find = temp->find;
             this->log = temp->log;
             this->pluginManager = temp->pluginManager;

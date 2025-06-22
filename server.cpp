@@ -130,21 +130,22 @@ int main()
                         std::cout << "input plugin index:";
                         inputIndex = 0;
                         std::cin >> inputIndex;
+
                         if (inputIndex >= 0 && inputIndex < temp.size())
                               send(*mainConnectSocket, temp[inputIndex]);
-                        std::cout << recv(*mainConnectSocket, buf);
 
-                        if (buf == "ok")
+                        if (buf == "success")
                         {
-                              PluginInfo info;
-                              std::shared_ptr<PluginInfoStruct> PInfo(new PluginInfoStruct);
-                              info.cus = std::make_shared<pluginInfo>();
-                              info.cus->data.push_back((std::shared_ptr<void>)PInfo);
+                              Info info;
+                              std::shared_ptr<PluginInfoStruct> PInfo(new PluginInfoStruct(pluginManager, g_log));
+                              info.customize_data.push_back(std::make_shared<programPluginInfoStruct>());
+                              info.customize_data.push_back((std::shared_ptr<void>)PInfo);
                               (*pluginManager).runFun(temp[inputIndex], info);
                         }
                         else
                         {
                               std::cout << "Don't found plugin or run failed";
+                              system("pause");
                         }
                   }
             }
