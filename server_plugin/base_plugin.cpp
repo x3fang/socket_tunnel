@@ -67,6 +67,7 @@ public:
       find()
       {
             this->used = true;
+            this->show = false;
             this->pluginName = "findClient";
             this->version = "1.0.0";
             this->author = "x3fang";
@@ -95,6 +96,7 @@ public:
       delClient()
       {
             this->used = true;
+            this->show = false;
             this->pluginName = "delClient";
             this->version = "1.0.0";
             this->author = "x3fang";
@@ -151,6 +153,7 @@ public:
       showClient()
       {
             this->used = true;
+            this->show = false;
             this->pluginName = "showClient";
             this->version = "1.0.0";
             this->author = "x3fang";
@@ -239,6 +242,7 @@ public:
       connectClient()
       {
             this->used = true;
+            this->show = true;
             this->pluginName = "connectClient";
             this->version = "1.0.0";
             this->author = "x3fang";

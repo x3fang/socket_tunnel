@@ -133,7 +133,7 @@ int main()
 
                         if (inputIndex >= 0 && inputIndex < temp.size())
                               send(*mainConnectSocket, temp[inputIndex]);
-
+                        recv(*mainConnectSocket, buf);
                         if (buf == "success")
                         {
                               Info info;

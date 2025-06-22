@@ -47,6 +47,7 @@ namespace PluginNamespace
 
             virtual bool runFun(Info &info) = 0;
             bool used = false;
+            bool show = true;
 
       protected:
             std::string author, version, pluginName;
@@ -85,7 +86,8 @@ namespace PluginNamespace
                   std::vector<std::string> res;
                   for (auto &it : pluginFunList)
                   {
-                        res.push_back(it.first);
+                        if (pluginFunList[it.first]->used && pluginFunList[it.first]->show)
+                              res.push_back(it.first);
                   }
                   return res;
             }

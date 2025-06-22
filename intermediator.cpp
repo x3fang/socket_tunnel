@@ -201,7 +201,7 @@ void healthyBeat()
 }
 void serverThread(const std::string SEID)
 {
-      auto prlog = (*g_log).getFunLog("Server-SEID:" + SEID);
+      auto prlog = (*g_log).getFunLog(("Server-SEID:" + SEID));
       auto info = (*ServerInfo)[SEID];
       prlog->writeln("waiting for server healthy socket connect");
       while (*info->healthSocket == INVALID_SOCKET)
@@ -223,7 +223,7 @@ void serverThread(const std::string SEID)
                         delServer(SEID);
                         return;
                   }
-                  else
+                  else if ((*pluginManager).findFun(buf))
                   {
                         prlog->writeln("plugin name:" + buf);
                         std::shared_ptr<PluginInfoStruct> PInfo(new PluginInfoStruct);
@@ -242,15 +242,12 @@ void serverThread(const std::string SEID)
 
                         runFunInfo.customize_data.push_back(pluginInfoTemp);
                         runFunInfo.customize_data.push_back((std::shared_ptr<void>)PInfo);
-                        if ((*pluginManager).findFun(buf))
-                        {
-                              send(*info->commSocket, "success");
-                              if ((*pluginManager).runFun(buf, runFunInfo))
-                                    send(*info->commSocket, "ok");
-                              else
-                                    send(*info->commSocket, "failed");
-                              continue;
-                        }
+                        send(*info->commSocket, "success");
+                        if ((*pluginManager).runFun(buf, runFunInfo))
+                              send(*info->commSocket, "ok");
+                        else
+                              send(*info->commSocket, "failed");
+                        continue;
                         send(*info->commSocket, "failed");
                         prlog->writeln("runFun failed");
                   }

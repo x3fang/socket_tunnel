@@ -185,10 +185,6 @@ namespace logNameSpace
       }
       Log::~Log()
       {
-            if (!msg.empty())
-            {
-                  logFile << getTime() << " " << msg << std::endl;
-            }
             logFile.close();
       }
       Log *Log::operator=(Log &other)
@@ -265,6 +261,7 @@ namespace logNameSpace
                   }
 
                   logFile << prefix << " " << this->msg;
+                  logFile.close();
                   this->msg = (this->msg.find_last_of("\n") == std::string::npos ? "" : this->msg.substr(this->msg.find_last_of("\n") + 1));
             }
             mustChangeFlie();

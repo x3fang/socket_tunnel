@@ -12,6 +12,7 @@ public:
       connectClient()
       {
             this->used = true;
+            this->show = true;
             this->pluginName = "connectClient";
             this->version = "1.0.0";
             this->author = "x3fang";
