@@ -10,7 +10,7 @@
 #include <locale>
 #include <codecvt>
 #include <queue>
-#include <iostream>
+#include <sstream>
 #include "globalDefine.h"
 
 namespace PluginNamespace
@@ -20,6 +20,8 @@ namespace PluginNamespace
       {
       private:
             using data_type = std::vector<std::shared_ptr<void>>;
+            std::vector<std::string> arguments_splitBySpaceList;
+            std::string arguments;
 
       public:
             data_type customize_data;
@@ -28,12 +30,35 @@ namespace PluginNamespace
                 : customize_data(n_data) {}
             Info(const Info &other)
                 : customize_data(other.customize_data) {}
+            void setArguments(const std::string &n_arguments)
+            {
+                  arguments = n_arguments;
+                  arguments_splitBySpaceList.clear();
+                  std::istringstream ss(arguments);
+                  std::string temp;
+                  while (ss >> temp)
+                  {
+                        arguments_splitBySpaceList.push_back(temp);
+                  }
+                  return;
+            }
+            inline std::vector<std::string> getArguments_splitBySpaceList() const
+            {
+                  return arguments_splitBySpaceList;
+            }
+            inline std::string getArguments() const
+            {
+                  return arguments;
+            }
             inline Info &operator=(const Info &other)
             {
                   customize_data = other.customize_data;
+                  arguments = other.arguments;
+                  arguments_splitBySpaceList = other.arguments_splitBySpaceList;
                   return *this;
             }
       };
+      class PluginManager;
       class pluginBase
       {
       public:
@@ -42,12 +67,13 @@ namespace PluginNamespace
             pluginBase(const pluginBase &other) = delete;
             pluginBase &operator=(const pluginBase &other) = delete;
             inline const std::string getAuthor(void) const { return this->author; }
-            inline const std::string getversion(void) const { return this->version; }
-            inline const std::string getpluginName(void) const { return this->pluginName; }
+            inline const std::string getVersion(void) const { return this->version; }
+            inline const std::string getPluginName(void) const { return this->pluginName; }
 
             virtual bool runFun(Info &info) = 0;
             bool used = false;
             bool show = true;
+            bool local = false;
 
       protected:
             std::string author, version, pluginName;
@@ -63,7 +89,7 @@ namespace PluginNamespace
                   if (!plugin)
                         return std::pair<bool, const std::string>(false, "");
                   const std::string pluginAuthor = plugin->getAuthor();
-                  const std::string pluginName = plugin->getpluginName();
+                  const std::string pluginName = plugin->getPluginName();
                   if (!pluginAuthor.empty() && !pluginName.empty() && !findFun(pluginAuthor)) // not found,register
                   {
                         auto res = pluginFunList.insert(std::pair<std::string, pluginBase *>(pluginName, plugin));
@@ -96,6 +122,37 @@ namespace PluginNamespace
                   return (pluginFunList.find(funName) != pluginFunList.end());
             }
             inline std::size_t getLoadPluginNum() { return pluginFunList.size(); }
+            std::vector<std::string> getLocalPluginName(void)
+            {
+                  std::vector<std::string> res;
+                  for (auto &it : pluginFunList)
+                  {
+                        if (it.second->local && it.second->show)
+                              res.push_back(it.first);
+                  }
+                  return res;
+            }
+            inline const std::string getFunAuthor(const std::string &funName)
+            {
+                  return (findFun(funName) ? pluginFunList[funName]->getAuthor() : std::string(""));
+            }
+            inline const std::string getFunVersion(const std::string &funName)
+            {
+                  return (findFun(funName) ? pluginFunList[funName]->getVersion() : std::string(""));
+            }
+            inline const bool isFunLocal(const std::string &funName)
+            {
+                  return (findFun(funName) ? pluginFunList[funName]->local : false);
+            }
+            inline const bool isFunUsed(const std::string &funName)
+            {
+                  return (findFun(funName) ? pluginFunList[funName]->used : false);
+            }
+            inline const bool isFunShow(const std::string &funName)
+            {
+                  return (findFun(funName) ? pluginFunList[funName]->show : false);
+            }
+
             PluginManager();
             ~PluginManager() = default;
             PluginManager(PluginManager *other)
@@ -141,6 +198,7 @@ namespace PluginNamespace
             this->version = "1.0.0";
             this->pluginName = "PluginManager";
       }
+
       typedef bool (*registerFun)(PluginManager &);
       std::vector<HINSTANCE> pluginDllHandle(5, 0);
       int loadPlugin(PluginManager &manager, const std::string &pluginPath)

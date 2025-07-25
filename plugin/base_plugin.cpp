@@ -96,7 +96,7 @@ public:
 
             auto funlog = pluginInfo->log->getFunLog("showClientRunFun");
             std::string sendMsg;
-            std::shared_ptr<Fliter> fliter;
+            std::shared_ptr<Fliter> fliter = nullptr;
             if (info.customize_data.size() >= 3)
             {
                   fliter = std::static_pointer_cast<Fliter>(info.customize_data[2]);
@@ -115,7 +115,63 @@ public:
                   fliter->addRuleType("commit", EQUAL | NOT_EQUAL);
                   fliter->addRuleType("systemKind", EQUAL | NOT_EQUAL);
             }
-            funlog->writeln(std::to_string(pluginInfo->ClientInfo->size()));
+            if (info.customize_data.size() >= 4)
+            {
+                  std::vector<std::string> data_splitBySpace = info.getArguments_splitBySpaceList();
+                  std::vector<std::string> fliterTypeNameArgList;
+                  std::vector<std::vector<std::string>> fliterValueArgList;
+                  std::vector<std::vector<std::string>> fliterConditionArgList;
+                  int index = 0;
+
+                  for (std::string name = data_splitBySpace.front(), value, condition; !data_splitBySpace.empty();)
+                  {
+
+                        data_splitBySpace.erase(data_splitBySpace.begin());
+                        while (true)
+                        {
+                              if (data_splitBySpace.size() >= 3)
+                              {
+                                    int delList = 0;
+                                    auto it = data_splitBySpace.begin();
+
+                                    value = *it;
+                                    delList++;
+
+                                    condition = *(++it);
+                                    delList++;
+
+                                    while (*(it + 1) != "|")
+                                    {
+                                          condition += *(++it);
+                                          delList++;
+                                    }
+                                    fliterValueArgList[index].push_back(value);
+                                    fliterConditionArgList[index].push_back(condition);
+                                    for (int i = 0; i < delList; i++)
+                                    {
+                                          data_splitBySpace.erase(data_splitBySpace.begin());
+                                    }
+                              }
+                              else
+                                    continue;
+                        }
+                        index++;
+                        fliterTypeNameArgList.push_back(name);
+                        name = data_splitBySpace.front();
+                  }
+                  std::vector<std::string> fliterRuleType = fliter->getAllRuleType();
+
+                  index = 0;
+                  for (auto &ruleType : fliterRuleType)
+                  {
+                        if (std::find(fliterTypeNameArgList.begin(), fliterTypeNameArgList.end(), ruleType) != fliterTypeNameArgList.end())
+                        {
+                              for (int i = 0; i < fliterTypeNameArgList.size(); i++)
+                                    fliter->addRule(ruleType, fliterValueArgList[index][i], FliterOption[fliterConditionArgList[index][i]]);
+                        }
+                        ++index;
+                  }
+            }
             return sendOnce(sock, *(pluginInfo->ClientInfo), *fliter);
       }
       showClient()

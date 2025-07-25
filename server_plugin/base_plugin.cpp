@@ -173,6 +173,7 @@ public:
             auto funlog = pluginInfo->log->getFunLog("connectClient");
             std::string data;
             int clientNum = 0;
+
             while (true)
             {
                   bool intoConnect = false;

@@ -256,7 +256,7 @@ namespace logNameSpace
                         break;
 
                   case detailLevelEnum::release:
-                        prefix = "[INFO][" + getTime() + "] [file: " + location.file_name() + "]";
+                        prefix = "[INFO][" + getTime() + "] [file: " + location.file_name() + " ]";
                         break;
                   }
 

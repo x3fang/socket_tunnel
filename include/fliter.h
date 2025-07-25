@@ -12,17 +12,26 @@
 == 010000
 != 100000*/
 // 0 1 2 3 4 5
-#define LESSTHAN std::bitset<Fliter::optNum>(32)
-#define LESSTHAN_OR_EQUAL std::bitset<Fliter::optNum>(16)
-#define MORETHAN std::bitset<Fliter::optNum>(8)
-#define MORETHAN_OR_EQUAL std::bitset<Fliter::optNum>(4)
-#define EQUAL std::bitset<Fliter::optNum>(2)
-#define NOT_EQUAL std::bitset<Fliter::optNum>(1)
+#define LESSTHAN std::bitset<optNum>(32)          //<
+#define LESSTHAN_OR_EQUAL std::bitset<optNum>(16) //<=
+#define MORETHAN std::bitset<optNum>(8)           //>
+#define MORETHAN_OR_EQUAL std::bitset<optNum>(4)  //>=
+#define EQUAL std::bitset<optNum>(2)              //==
+#define NOT_EQUAL std::bitset<optNum>(1)          //!=
+
+const int optNum = 6;
+
+std::map<std::string, std::bitset<optNum>> FliterOption = {
+    {"LESSTHAN", LESSTHAN},                   //<
+    {"LESSTHAN_OR_EQUAL", LESSTHAN_OR_EQUAL}, //<=
+    {"MORETHAN", MORETHAN},                   //>
+    {"MORETHAN_OR_EQUAL", MORETHAN_OR_EQUAL}, //>=
+    {"EQUAL", EQUAL},                         //==
+    {"NOT_EQUAL", NOT_EQUAL}                  //!=
+};
+
 class Fliter
 {
-public:
-      static const int optNum = 6;
-
 private:
       using VariantIntOrString = std::variant<int, std::string>;
       struct ruleValue
@@ -71,6 +80,7 @@ public:
       */
       bool addRuleType(const std::string &ruleTypeName, const std::bitset<optNum> typeSupportOpt);
       bool addRuleType(const std::string &ruleTypeName, const std::string &typeSupportOpt);
+      std::vector<std::string> getAllRuleType();
       /*
       if this rule's ruleType's typeSupportOpt [2~5] set 1,use int to save value else use string
       */
@@ -102,6 +112,13 @@ bool Fliter::addRuleType(const std::string &ruleTypeName, const std::string &typ
       ruleTypeNode temp(typeSupportOpt[0] == '1' || typeSupportOpt[1] == '1' || typeSupportOpt[2] == '1' || typeSupportOpt[3] == '1',
                         std::bitset<optNum>(typeSupportOpt));
       return ruleTypeList.insert(std::pair<std::string, ruleTypeNode>(ruleTypeName, temp)).second;
+}
+std::vector<std::string> Fliter::getAllRuleType()
+{
+      std::vector<std::string> temp;
+      for (auto i : ruleTypeList)
+            temp.push_back(i.first);
+      return temp;
 }
 std::string Fliter::addRule(const std::string &ruleTypeName, const std::string &compareValue, const std::bitset<optNum> ruleUsedOpt, bool useRule)
 {

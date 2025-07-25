@@ -107,6 +107,7 @@ int del(const std::string &SEID, std::map<std::string, std::shared_ptr<Individua
                   *(*infoMap)[SEID]->healthSocket = INVALID_SOCKET;
                   healthyBeatSOCKETList.erase(std::find(healthyBeatSOCKETList.begin(), healthyBeatSOCKETList.end(), SEID));
             }
+            send(*(*infoMap)[SEID]->commSocket, "end");
             closesocket(*(*infoMap)[SEID]->commSocket);
             *(*infoMap)[SEID]->commSocket = INVALID_SOCKET;
             (*(*infoMap)[SEID]).unLock();
@@ -170,7 +171,7 @@ void healthyBeat()
 #ifdef DEBUG
       while (true)
             ;
-#endif
+#else
       static auto prlog = (*g_log).getFunLog("healthyBeat");
       std::default_random_engine random_engine;
       random_engine.seed(time(0));
@@ -198,6 +199,7 @@ void healthyBeat()
             }
             Sleep(500);
       }
+#endif
 }
 void serverThread(const std::string SEID)
 {
@@ -210,9 +212,9 @@ void serverThread(const std::string SEID)
       if (info->waitLock() != SUCCESS_STATUS)
             return;
       std::string buf;
+      sendPluginList(*pluginManager, *info->commSocket);
       while (!ServerStopFlag)
       {
-            sendPluginList(*pluginManager, *info->commSocket);
             int res = recv(*info->commSocket, buf);
             if (res == SUCCESS_STATUS)
             {
@@ -222,6 +224,13 @@ void serverThread(const std::string SEID)
                         info->unLock();
                         delServer(SEID);
                         return;
+                  }
+                  else if (buf == "next")
+                        continue;
+                  else if (buf == "\r\nflash\r\n")
+                  {
+                        sendPluginList(*pluginManager, *info->commSocket);
+                        continue;
                   }
                   else if ((*pluginManager).findFun(buf))
                   {
@@ -243,13 +252,24 @@ void serverThread(const std::string SEID)
                         runFunInfo.customize_data.push_back(pluginInfoTemp);
                         runFunInfo.customize_data.push_back((std::shared_ptr<void>)PInfo);
                         send(*info->commSocket, "success");
+
+                        std::string argRecvBuf, argRecvBuf_toupper;
+                        recv(*info->commSocket, argRecvBuf);
+                        for (char c : argRecvBuf)
+                              argRecvBuf_toupper += std::toupper(c);
+                        if (argRecvBuf_toupper != "NULL")
+                        {
+                              runFunInfo.setArguments(argRecvBuf);
+                        }
+
                         if ((*pluginManager).runFun(buf, runFunInfo))
-                              send(*info->commSocket, "ok");
+                              send(*info->commSocket, "success");
                         else
+                        {
+                              continue;
                               send(*info->commSocket, "failed");
-                        continue;
-                        send(*info->commSocket, "failed");
-                        prlog->writeln("runFun failed");
+                              prlog->writeln("runFun failed");
+                        }
                   }
             }
             else
