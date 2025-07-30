@@ -9,8 +9,7 @@
 #include <winsock2.h>
 #include <ws2tcpip.h>
 
-#pragma comment (lib,"Ws2_32.lib")
-
+#pragma comment(lib, "ws2_32.lib")
 #endif
 #define DEBUG // if define it,healthy Beat won't work
 #include <algorithm>
@@ -61,6 +60,8 @@ public:
 	}
 	void unLock()
 	{
+		if (!lock.owns_lock())
+			return;
 		use = false;
 		lock.unlock();
 		valueChange.notify_one();
@@ -121,14 +122,18 @@ int initClientSocket(WSADATA& wsaData, SOCKET& sock, sockaddr_in& serverInfo, st
 {
 	int iResult = WSAStartup(MAKEWORD(2, 2), &wsaData);
 	if (iResult != 0)
-		return iResult;
+	{
+		int errorCode = WSAGetLastError();
+		WSACleanup();
+		return errorCode;
+	}
 	// Create socket
 	sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 	if (sock == INVALID_SOCKET)
 	{
-		printf("Error at socket(): %ld\n", WSAGetLastError());
+		int errorCode = WSAGetLastError();
 		WSACleanup();
-		return WSAGetLastError();
+		return errorCode;
 	}
 	// Set address and port
 	serverInfo.sin_family = AF_INET;

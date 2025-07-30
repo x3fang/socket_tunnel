@@ -55,32 +55,26 @@ namespace MD5
 			tempD = D;
 			strlength = 0;
 		}
-		// F����
 		unsigned long long int F(unsigned long long int b, unsigned long long int c, unsigned long long int d)
 		{
 			return (b & c) | ((~b) & d);
 		}
-		// G����
 		unsigned long long int G(unsigned long long int b, unsigned long long int c, unsigned long long int d)
 		{
 			return (b & d) | (c & (~d));
 		}
-		// H����
 		unsigned long long int H(unsigned long long int b, unsigned long long int c, unsigned long long int d)
 		{
 			return b ^ c ^ d;
 		}
-		// I����
 		unsigned long long int I(unsigned long long int b, unsigned long long int c, unsigned long long int d)
 		{
 			return c ^ (b | (~d));
 		}
-		// ��λ��������
 		unsigned long long int shift(unsigned long long int a, unsigned long long int n)
 		{
 			return (a << n) | (a >> (32 - n));
 		}
-		// ���뺯��
 		std::string encode(std::string src)
 		{
 			std::vector<unsigned long long int> rec = padding(src);
@@ -95,7 +89,6 @@ namespace MD5
 			}
 			return format(tempA) + format(tempB) + format(tempC) + format(tempD);
 		}
-		// ѭ��ѹ��
 		void iterateFunc(unsigned long long int* X, int size = 16)
 		{
 			unsigned long long int a = tempA,
@@ -108,25 +101,21 @@ namespace MD5
 			{
 				if (i < 16)
 				{
-					// F����
 					g = F(b, c, d);
 					k = i;
 				}
 				else if (i < 32)
 				{
-					// G����
 					g = G(b, c, d);
 					k = (1 + 5 * i) % 16;
 				}
 				else if (i < 48)
 				{
-					// H����
 					g = H(b, c, d);
 					k = (5 + 3 * i) % 16;
 				}
 				else
 				{
-					// I����
 					g = I(b, c, d);
 					k = (7 * i) % 16;
 				}
@@ -143,7 +132,6 @@ namespace MD5
 		}
 		std::vector<unsigned long long int> padding(std::string src)
 		{
-			// ��512λ,64���ֽ�Ϊһ��
 			unsigned long long int num = ((src.length() + 8) / 64) + 1;
 			std::vector<unsigned long long int> rec(num * 16);
 			strlength = num * 16;
@@ -152,11 +140,9 @@ namespace MD5
 				rec[i >> 2] |= (int)(src[i]) << ((i % 4) * 8);
 			}
 			rec[src.length() >> 2] |= (0x80 << ((src.length() % 4) * 8));
-			// ���ԭ�ĳ���
 			rec[rec.size() - 2] = (src.length() << 3);
 			return rec;
 		}
-		// �������
 		std::string format(unsigned long long int num)
 		{
 			std::string res;

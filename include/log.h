@@ -21,9 +21,6 @@
 #include <source_location>
 namespace logNameSpace
 {
-	struct ENDL
-	{
-	} endl;
 	// 通过stat结构体 获得文件大小，单位字节
 	size_t getFileSize1(const char* fileName)
 	{
@@ -41,7 +38,9 @@ namespace logNameSpace
 
 		return filesize;
 	}
-
+	struct ENDL
+	{
+	} endl;
 	class Log;
 	class funLog
 	{
@@ -117,7 +116,6 @@ namespace logNameSpace
 		std::string logName;
 		std::map<std::string, std::shared_ptr<funLog>> funlogList;
 	};
-
 
 
 	// funLog fun
@@ -209,7 +207,7 @@ namespace logNameSpace
 		for (int i = 0; true; i++)
 		{
 			paths = std::string("log/") + temp + std::string(".log");
-			flieSize = static_cast<int>(getFileSize1(paths.c_str()));
+			flieSize = static_cast<int>(logNameSpace::getFileSize1(paths.c_str()));
 			if (flieSize >= logMaxSize)
 			{
 				if (i > 0)

@@ -1,0 +1,2 @@
+#define CLIENTSERVER_API __declspec(dllexport)
+#define CLIENTSERVER_API __declspec(dllimport)

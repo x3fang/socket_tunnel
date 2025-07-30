@@ -12,411 +12,462 @@
 #include <algorithm>
 #include <windows.h>
 #include <conio.h>
-#define EDIT_MAX_HEIGHT 10
+/*
+													  showBegin     0
+.                                                                             1
+.                                                                            ....
+.                                                                            ....
+													  showEnd        n
+prompt-----------------------editBegin       n+1
+.                                                                             ..
+.                                                                             ..
+.                                                                             ..
+													  editEnd           m
+*/
 class ConsoleChatUI
 {
 private:
-      std::jthread inputThread;
-      std::string prompt;
-      std::vector<std::pair<bool /*true means user sent*/, std::vector<std::string>>> sentMessages;
-      std::vector<std::vector<std::string>> finishedInput;
-      std::vector<std::string> OutputWords;
-      std::vector<std::string> editVector;
-      std::mutex screenLock;
-      std::mutex finishedInputVectorLock;
-      int editHeight = 0, showHeight = 0;
-      int termRows = 0, termCols = 0;
+	std::jthread inputThread;
 
-      int showY = 0;
+	std::mutex screenLock;
 
-      int editBeginX = 0, editBeginY = 0;
-      int editX = 0, editY = 0;
-      int editEndX = 0, editEndY = 0;
-      int editVectorBeginNum = 0, editVectorEndNum = 0;
+	int terminalHeight = 0, terminalWidth = 0;
 
-      int showVectorBeginNum = 0;
+	std::vector<std::string> displayHistory;
+	int displlayHistorylength = 0;
+	int displayAreaBeginY = 0, displayAreaEndY = 0;
+	int displayHistoryVectorInputIndex = 0;
+	int displayAreaCursorY = 0;
 
-      bool stopSign = false;
+	std::string prompt;
+	std::vector<std::string> editingMessage;
+	std::vector<std::vector<std::string>> completedEditMessage;
+	int editBegin = 0, editEnd = 0;
+	int editCursorX = 0, editCursorY = 0;
+	int editingMessageNumY = 0; // Actual location in editingMessage
+	int editEditingMessageVectorOutputBeginNum = 0, editEditingMessageVectorOutputBeginSection = 0;
+	int editEditingMessageVectorOutputEndNum = 0, editEditingMessageVectorOutputEndSection = 0;
 
 public:
-      ConsoleChatUI() = default;
-      ~ConsoleChatUI() = default;
-      void start();
-      void stop();
-      void outputline(std::string outputMessage, bool saveHistory = true, bool screenLocked = false);
-      std::string getUserInputByString()
-      {
-            std::string ret;
-            finishedInputVectorLock.lock();
-            if (!finishedInput.empty())
-            {
-                  if (finishedInput.front().empty())
-                        ret = "";
-                  else
-                  {
-                        ret = finishedInput.front().front();
-                        finishedInput.front().erase(finishedInput.front().begin());
-                  }
-            }
-            finishedInputVectorLock.unlock();
-            return ret;
-      }
-      int setPrompt(std::string prompt)
-      {
-            if (prompt.length() > termCols)
-            {
-                  this->prompt = prompt.substr(0, termCols);
-            }
-            this->prompt = prompt;
-            return this->prompt.length();
-      }
+	ConsoleChatUI() = default;
+	~ConsoleChatUI() = default;
+	void setPrompt(std::string prompt)
+	{
+		this->prompt = prompt;
+		return;
+	}
+	void start()
+	{
+		auto terminalHeightWeight = get_terminal_size();
+		terminalHeight = terminalHeightWeight.first;
+		terminalWidth = terminalHeightWeight.second;
 
-      std::vector<std::string> getUserInputByVector()
-      {
-            if (finishedInput.empty())
-                  return std::vector<std::string>();
-            finishedInputVectorLock.lock();
-            auto ret = finishedInput.front();
-            finishedInput.erase(finishedInput.begin());
-            finishedInputVectorLock.unlock();
-            return ret;
-      }
+		if (terminalHeight % 2 != 0)
+		{
+			displayAreaEndY = (terminalHeight - 1) / 2 - 1;
+			editBegin = (terminalHeight - 1) / 2;
+		}
+		else
+		{
+			displayAreaEndY = terminalHeight / 2 - 1;
+			editBegin = terminalHeight / 2;
+		}
+		editEnd = terminalHeight;
+		editCursorY = editBegin + 1;
+		editingMessageNumY = 0;
+
+		repaint(false, false, true, false, false);
+
+		this->editingMessage.push_back("");
+		inputThread = std::jthread(&ConsoleChatUI::inputFunc, this);
+		return;
+	}
+	void outputFunc(std::string outputMessage, bool saveHistory = true, bool screenLocked = false);
+	std::vector<std::string> getUserInputByOnce()
+	{
+		if (this->completedEditMessage.empty())
+			return std::vector<std::string>();
+		else
+		{
+			auto temp = this->completedEditMessage.front();
+			this->completedEditMessage.erase(this->completedEditMessage.begin());
+			return temp;
+		}
+	}
+	std::vector<std::vector<std::string>> getUserInputByALL()
+	{
+		if (this->completedEditMessage.empty())
+			return std::vector<std::vector<std::string>>();
+		else
+		{
+			auto& temp = this->completedEditMessage;
+			this->completedEditMessage.clear();
+			return temp;
+		}
+	}
+	void stop()
+	{
+		system("cls");
+		inputThread.join();
+		return;
+	}
 
 private:
-      // std::pair<int ->rows  , int ->cols  >
-      std::pair<int /*rows*/, int /*cols*/> get_terminal_size()
-      {
-            CONSOLE_SCREEN_BUFFER_INFO csbi;
-            GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbi);
-            int term_rows = csbi.srWindow.Bottom - csbi.srWindow.Top + 1;
-            int term_cols = csbi.srWindow.Right - csbi.srWindow.Left + 1;
-            return {term_rows, term_cols};
-      }
-      void inputline();
-      void display(bool showDown = false, bool editDown = false, bool all = false, bool locked = false);
-      inline void moveCursor(int x, int y)
-      {
-            COORD coord;
-            coord.X = x;
-            coord.Y = y;
-            SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), coord);
-      }
+	static std::pair<int /*rows*/, int /*cols*/> get_terminal_size()
+	{
+		CONSOLE_SCREEN_BUFFER_INFO csbi;
+		GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbi);
+		int term_rows = csbi.srWindow.Bottom - csbi.srWindow.Top + 1;
+		int term_cols = csbi.srWindow.Right - csbi.srWindow.Left + 1;
+		return { term_rows, term_cols };
+	}
+	static inline void moveCursor(int x, int y)
+	{
+		COORD coord = { 0 };
+		coord.X = x;
+		coord.Y = y - 1;
+		SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), coord);
+	}
+
+	void repaint(bool displayArea = false, bool editArea = false, bool allArea = false, bool lock_screenLock = true, bool partialRepaint = true, bool onlyClear = false);
+	void repaintDisplayArea(bool lock_screenLock = true, bool partialRepaint = true);
+	void repaintEditArea(bool lock_screenLock = true, bool partialRepaint = true, bool onlyClear = false);
+	void repaintAllArea(bool lock_screenLock = true, bool partialRepaint = true, bool onlyClear = false);
+
+	void inputFunc();
+	void inputFunc_switch1_case_r_case_n();
+	void inputFunc_switch1_case_b();
+	void inputFunc_switch1_case_default(char inputChar);
+	void inputFunc_switch1_case_32(char inputChar);
 };
-void ConsoleChatUI::start()
+void ConsoleChatUI::repaint(bool displayArea, bool editArea, bool allArea, bool lock_screenLock, bool partialRepaint, bool onlyClear)
 {
-      std::pair<int, int> term_size = get_terminal_size();
-      termRows = term_size.first;
-      termCols = term_size.second;
-
-      editBeginX = 0;
-      if (termRows % 2 != 0)
-      {
-            editBeginY = (termRows - 1) / 2;
-            showHeight = (termRows + 1) / 2;
-      }
-      else
-      {
-            editBeginY = termRows / 2;
-            showHeight = termRows / 2;
-      }
-
-      editEndX = termCols;
-      editEndY = termRows;
-      editX = editBeginX;
-      editY = editBeginY + 1;
-
-      display(false, false, true);
-      inputThread = std::jthread(&ConsoleChatUI::inputline, this);
+	if (displayArea)
+	{
+		this->repaintDisplayArea(lock_screenLock, partialRepaint);
+	}
+	if (editArea)
+	{
+		this->repaintEditArea(lock_screenLock, partialRepaint, onlyClear);
+	}
+	if (allArea)
+	{
+		this->repaintAllArea(lock_screenLock, partialRepaint, onlyClear);
+	}
+	return;
 }
-void ConsoleChatUI::stop()
+// the partialRepaint hasn't meaning
+void ConsoleChatUI::repaintDisplayArea(bool lock_screenLock, bool partialRepaint)
 {
-      stopSign = true;
-      system("pause");
-      system("cls");
-      return;
+	if (!lock_screenLock)
+		this->screenLock.lock();
+	moveCursor(0, this->displayAreaCursorY + 1);
+	if (this->displlayHistorylength - this->displayHistoryVectorInputIndex >= this->displayAreaEndY - this->displayAreaBeginY)
+	{
+		std::cout << "\033[K"; // clear the line
+		moveCursor(0, this->terminalHeight);
+		std::cout << std::endl;
+		repaintEditArea(true, false, false);
+	}
+	if (!lock_screenLock)
+		screenLock.unlock();
+	return;
 }
-void ConsoleChatUI::outputline(std::string outputMessage, bool saveHistory, bool screenLocked)
+void ConsoleChatUI::repaintEditArea(bool lock_screenLock, bool partialRepaint, bool onlyClear)
 {
-      if (saveHistory)
-            OutputWords.push_back(outputMessage);
-      if (!screenLocked)
-            screenLock.lock();
-      moveCursor(0, showY);
-      if (showY >= showHeight)
-      {
-            if (outputMessage.find_first_of("\n") != std::string::npos)
-            {
-                  while (outputMessage.find_first_of("\n") != std::string::npos)
-                  {
-                        outputline(outputMessage.substr(0, outputMessage.find_first_of("\n")), false, true);
-                        outputMessage = outputMessage.substr(outputMessage.find_first_of("\n") + 1);
-                  }
-                  if (outputMessage.empty())
-                  {
-                        if (!screenLocked)
-                              screenLock.unlock();
-                        return;
-                  }
-            }
-            if (outputMessage.length() > termCols)
-            {
-                  while (outputMessage.length() > termCols)
-                  {
-                        outputline(outputMessage.substr(0, termCols), false, true);
-                        outputMessage = outputMessage.substr(termCols);
-                  }
-                  outputline(outputMessage, false, true);
-            }
-            else
-            {
-                  ++showVectorBeginNum;
-                  display(true, false, false, true);
-                  moveCursor(0, showY - 1);
-                  std::cout << outputMessage << std::endl;
-            }
-            moveCursor(editX, editY);
-      }
-      else
-      {
-            if (outputMessage.find_first_of("\n") != std::string::npos)
-            {
-                  while (outputMessage.find_first_of("\n") != std::string::npos)
-                  {
-                        outputline(outputMessage.substr(0, outputMessage.find_first_of("\n")), false, true);
-                        outputMessage = outputMessage.substr(outputMessage.find_first_of("\n") + 1);
-                  }
-                  if (outputMessage.empty())
-                  {
-                        if (!screenLocked)
-                              screenLock.unlock();
-                        return;
-                  }
-            }
-            if (outputMessage.length() > termCols)
-            {
-                  while (outputMessage.length() > termCols)
-                  {
-                        outputline(outputMessage.substr(0, termCols), false, true);
-                        outputMessage = outputMessage.substr(termCols);
-                  }
-                  outputline(outputMessage, false, true);
-            }
-            else
-            {
-                  moveCursor(0, showY);
-                  std::cout << outputMessage << std::endl;
-                  showY++;
-            }
-            moveCursor(editX, editY);
-      }
-      if (!screenLocked)
-            screenLock.unlock();
-      return;
+	if (!lock_screenLock)
+		screenLock.lock();
+	moveCursor(0, this->editBegin);
+	if (!onlyClear)
+	{
+		std::cout << this->prompt;
+		for (int i = 0; i < terminalWidth - this->prompt.length(); i++)
+		{
+			std::cout << "-";
+		}
+	}
+
+	moveCursor(0, this->editBegin + 1);
+	for (int i = editEditingMessageVectorOutputBeginNum; i < this->editEditingMessageVectorOutputEndNum && this->editingMessage.size() > 0; i++)
+	{
+		std::cout << "\033[K" << std::endl;
+	}
+	std::cout << "\033[K";
+	if (onlyClear)
+	{
+		if (!lock_screenLock)
+			screenLock.unlock();
+		return;
+	}
+
+	// paint edit Area
+	moveCursor(0, this->editBegin + 1);
+	for (int i = editEditingMessageVectorOutputBeginNum; i <= this->editEditingMessageVectorOutputEndNum && this->editingMessage.size() > 0; i++)
+	{
+		std::cout << this->editingMessage[i];
+		if (i != this->editEditingMessageVectorOutputEndNum)
+		{
+			std::cout << std::endl;
+		}
+	}
+	if (!lock_screenLock)
+		screenLock.unlock();
+	return;
 }
-void ConsoleChatUI::inputline()
+void ConsoleChatUI::repaintAllArea(bool lock_screenLock, bool partialRepaint, bool onlyClear)
 {
-      bool DownShift = false;
-      char inputChar;
-      while (!stopSign)
-      {
-            if (_kbhit() != 0)
-            {
-                  inputChar = getch();
-                  screenLock.lock();
-                  switch (inputChar)
-                  {
-                  case '\r':
-                  case '\n':
-
-                        if ((GetAsyncKeyState(VK_SHIFT) & 0x8000) == 0)
-                        {
-                              finishedInputVectorLock.lock();
-                              finishedInput.push_back(editVector);
-                              finishedInputVectorLock.unlock();
-                              editVector.clear();
-
-                              display(false, true, false, true);
-                              editX = editBeginX;
-                              editY = editBeginY + 1;
-                              editVectorEndNum = 0;
-                              editVectorBeginNum = 0;
-
-                              break;
-                        }
-                        editVector.push_back(std::string(""));
-                        editX = 0;
-                        editY++;
-                        editVectorEndNum++;
-                        if (editVectorEndNum - editVectorBeginNum >= editEndY - editBeginY - 2 || editY >= editEndY - 1)
-                        {
-                              editVectorBeginNum += 1;
-                              editY--;
-                              display(false, true, false, true);
-                        }
-                        else
-                              std::cout << std::endl;
-                        break;
-                  case 8:
-                  case 127:
-                        if (editX == 0 && editY - 2 >= editBeginY)
-                        {
-                              editX = termCols;
-                              editY--;
-                              if (editVector.size() == 0)
-                                    editVector.push_back(std::string(""));
-                              if (editVector.back().empty())
-                              {
-                                    editVector.pop_back();
-                                    editX = 0;
-                                    moveCursor(editX, editY);
-                                    editVectorEndNum--;
-                              }
-                              else
-                              {
-                                    editVector.back().pop_back();
-                              }
-                        }
-                        else if (editX > 0)
-                        {
-                              if (editVector.size() == 0)
-                                    editVector.push_back(std::string(""));
-                              editVector.back().pop_back();
-                              editX--;
-                        }
-                        else
-                              break;
-                        display(false, true, false, true);
-                        break;
-                  case -32: // arrow key
-                        inputChar = getch();
-                        switch (inputChar)
-                        {
-                        case 75: // left
-                              if (editX > 0)
-                              {
-                                    editX--;
-                              }
-                              else if (editX == 0)
-                              {
-                                    if (editY > editBeginY + 1)
-                                    {
-                                          editY--;
-                                          editX = editVector[editY - editBeginY - 1].size();
-                                    }
-                              }
-                              break;
-                        case 77: // right
-                              if (editX < editVector[editY - editBeginY - 1].size())
-                              {
-                                    editX++;
-                              }
-                              else if (editX == editVector[editY - editBeginY - 1].size())
-                              {
-                                    if (editY - editBeginY - 1 < editVector.size())
-                                    {
-                                          editY++;
-                                          editX = 0;
-                                    }
-                              }
-                              break;
-                        case 72: // up
-                              if (editY > editBeginY + 1)
-                              {
-                                    editY--;
-                              }
-                              if (editX > editVector[editY - editBeginY - 1].size())
-                              {
-                                    editX = editVector[editY - editBeginY - 1].size();
-                              }
-                              break;
-                        case 80: // down
-                              if (editY < editEndY)
-                              {
-                                    editY++;
-                              }
-                              if (editX > editVector[editY - editBeginY - 1].size())
-                              {
-                                    editX = editVector[editY - editBeginY - 1].size();
-                              }
-                              break;
-                        }
-                        moveCursor(editX, editY);
-                        display(false, true, false, true);
-                        break;
-                  default:
-                        if (editX + 1 > termCols)
-                        {
-                              if (editVector.size() == 0 || editVector.size() < editY - editBeginY)
-                                    editVector.push_back(std::string(""));
-                              editX = 0;
-                              editY++;
-                              editVector[editY - editBeginY - 1].insert(editVector[editY - editBeginY - 1].begin() + editX - editBeginX, inputChar);
-                              editX++;
-
-                              if (editY >= editEndY - 1)
-                              {
-                                    editVectorBeginNum += 1;
-                                    display(false, true, false, true);
-                                    editY--;
-                                    std::cout << inputChar;
-                              }
-                              else
-                                    std::cout << std::endl
-                                              << inputChar;
-                        }
-                        else if (inputChar != '\r')
-                        {
-                              if (editVector.size() == 0 || editVector.size() < editY - editBeginY - 1)
-                                    editVector.push_back(std::string(""));
-                              editVector[editY - editBeginY - 1].insert(editVector[editY - editBeginY - 1].begin() + editX - editBeginX, inputChar);
-                              editX++;
-                              std::cout << inputChar;
-                        }
-                  }
-                  screenLock.unlock();
-            }
-            else
-                  std::this_thread::sleep_for(std::chrono::milliseconds(10));
-      }
-      std::cout << "input thread exit";
-      return;
+	this->repaintDisplayArea(lock_screenLock, partialRepaint);
+	this->repaintEditArea(lock_screenLock, partialRepaint, onlyClear);
+	return;
 }
-void ConsoleChatUI::display(bool showDown, bool editDown, bool all, bool locked)
+void ConsoleChatUI::inputFunc_switch1_case_r_case_n()
 {
-      if (!locked)
-            screenLock.lock();
-      if (showDown)
-      {
-            moveCursor(0, showY);
-            for (int i = 0; i < editEndY - editBeginY; i++)
-                  std::cout << "\r\033[K\r\n";
+	if ((GetAsyncKeyState(VK_SHIFT) & 0x8000) == 0 && !this->editingMessage.empty()) // No press shift ,send message
+	{
+		this->completedEditMessage.push_back(this->editingMessage);
+		this->editingMessage.clear();
+		this->editingMessage.push_back("");
+		this->editCursorX = 0;
+		this->editCursorY = this->editBegin + 1;
+		this->editingMessageNumY = 0;
+		this->repaintEditArea(true, false, true);
+		this->editEditingMessageVectorOutputBeginNum = 0;
+		this->editEditingMessageVectorOutputBeginSection = 0;
+		this->editEditingMessageVectorOutputEndNum = 0;
+		this->editEditingMessageVectorOutputEndSection = 0;
+	}
+	else // newline
+	{
+		if (this->editCursorX != 0)
+		{
+			std::string temp = this->editingMessage[this->editingMessageNumY].substr(this->editCursorX);
+			this->editingMessage[this->editingMessageNumY] = this->editingMessage[this->editingMessageNumY].substr(0, this->editCursorX);
+			this->editingMessage.insert(this->editingMessage.begin() + this->editingMessageNumY + 1, temp);
+		}
+		else
+		{
+			if (this->editingMessage.begin() + this->editingMessageNumY + 1 < this->editingMessage.end())
+				this->editingMessage.insert(this->editingMessage.begin() + this->editingMessageNumY + 1, "");
+			else
+				this->editingMessage.push_back("");
+		}
+		if (this->editCursorY >= this->editEnd)
+		{
+			this->editEditingMessageVectorOutputBeginNum++;
+		}
+		if (this->editCursorY < this->editEnd)
+		{
+			this->editCursorY++;
+		}
+		this->editingMessageNumY++;
+		this->editEditingMessageVectorOutputEndNum++;
+		this->editCursorX = 0;
+		this->repaintEditArea(true, true, false);
+	}
+	return;
+}
+void ConsoleChatUI::inputFunc_switch1_case_b()
+{
+	if (this->editCursorX != 0)
+	{
+		this->editingMessage[this->editingMessageNumY].erase(this->editingMessage[this->editingMessageNumY].begin() + this->editCursorX - 1);
+		this->editCursorX--;
+	}
+	else if (this->editingMessageNumY != 0)
+	{
+		this->editingMessage.erase(this->editingMessage.begin() + this->editingMessageNumY);
+		this->editCursorY--;
+		this->editingMessageNumY--;
+		this->editCursorX = static_cast<int>(this->editingMessage[this->editingMessageNumY].size());
+		if (this->editEditingMessageVectorOutputBeginNum != 0)
+			this->editEditingMessageVectorOutputBeginNum--;
+		this->editEditingMessageVectorOutputEndNum--;
+	}
+	this->repaintEditArea(true, false, true);
+	return;
+}
+void ConsoleChatUI::inputFunc_switch1_case_default(char inputChar)
+{
+	if (inputChar >= 32 && inputChar <= 126) // Printable characters
+	{
+		if (this->editingMessage[this->editingMessageNumY].size() + 1 > terminalWidth) // new line and add the last char
+		{
+			auto insertDatait = this->editingMessage.insert(this->editingMessage.begin() + this->editingMessageNumY + 1, "");
+			insertDatait->push_back(this->editingMessage[this->editingMessageNumY].back());
+			this->editingMessage[this->editingMessageNumY].pop_back();
+			this->editingMessage[this->editingMessageNumY].insert(this->editingMessage[this->editingMessageNumY].begin() + this->editCursorX - 1, inputChar);
+			if (this->editCursorX + 1 >= terminalWidth)
+			{
+				this->editCursorX = 1;
+				if (this->editCursorY == this->editEnd)
+				{
+					this->editEditingMessageVectorOutputBeginNum++;
+					editCursorY--;
+				}
+				this->editCursorY++;
+				this->editingMessageNumY++;
+			}
+			this->editEditingMessageVectorOutputEndNum++;
+		}
+		else
+		{
+			this->editingMessage[this->editingMessageNumY].insert(this->editingMessage[this->editingMessageNumY].begin() + this->editCursorX, inputChar);
+			this->editCursorX++;
+		}
+		this->repaintEditArea(true, true, false);
+	}
+	return;
+}
+void ConsoleChatUI::inputFunc_switch1_case_32(char inputChar)
+{
+	switch (inputChar)
+	{
+	case 72: // up
+		if (this->editingMessageNumY > 0)
+		{
 
-            display(false, true, false, true);
-            moveCursor(0, editBeginY - 1);
-      }
-      if (editDown)
-      {
-            moveCursor(0, editBeginY);
-            std::cout << this->prompt;
-            for (int i = 0; i < termCols - this->prompt.length(); i++)
-                  std::cout << "-";
-            std::cout << std::endl;
-            for (int i = 0; i < editY - editBeginY; i++)
-                  std::cout << "\r\033[K\r\n";
-            moveCursor(0, editBeginY + 1);
-            for (int i = editVectorBeginNum; i < editVectorEndNum && editVector.size() > 0; i++)
-            {
-                  std::cout << editVector[i] << std::endl;
-            }
-            if (editVector.size() > 0)
-                  std::cout << editVector[editVectorEndNum];
-      }
-      if (all)
-      {
-            std::cout << "\033[2J";
-            display(true, true, false, true);
-      }
-      if (!locked)
-            screenLock.unlock();
+			if (this->editCursorX > this->editingMessage[this->editingMessageNumY].size())
+				this->editCursorX = static_cast<int>(this->editingMessage[this->editingMessageNumY].size());
+			if (this->editingMessageNumY <= this->editEditingMessageVectorOutputBeginNum)
+			{
+				this->editEditingMessageVectorOutputBeginNum--;
+				this->editEditingMessageVectorOutputEndNum--;
+			}
+			else
+				this->editCursorY--;
+			this->editingMessageNumY--;
+		}
+		break;
+	case 80: // down
+		if (this->editingMessageNumY < this->editingMessage.size() - 1)
+		{
+			this->editingMessageNumY++;
+			if (this->editCursorX > this->editingMessage[this->editingMessageNumY].size())
+				this->editCursorX = static_cast<int>(this->editingMessage[this->editingMessageNumY].size());
+			if (this->editCursorY == this->editEnd)
+			{
+				this->editEditingMessageVectorOutputBeginNum++;
+				this->editEditingMessageVectorOutputEndNum++;
+			}
+			else
+				this->editCursorY++;
+		}
+		break;
+	case 75: // left
+		if (this->editCursorX > 0)
+		{
+			this->editCursorX--;
+		}
+		else if (this->editingMessageNumY > 0)
+		{
+			this->inputFunc_switch1_case_32(72);
+			this->editCursorX = static_cast<int>(this->editingMessage[this->editingMessageNumY].size());
+			return;
+		}
+		break;
+	case 77: // right
+		if (this->editCursorX < this->editingMessage[this->editingMessageNumY].size())
+		{
+			this->editCursorX++;
+		}
+		else if (this->editingMessageNumY < this->editingMessage.size() - 1)
+		{
+			this->inputFunc_switch1_case_32(80);
+			this->editCursorX = 0;
+			return;
+		}
+		break;
+	}
+	this->repaintEditArea(true, false, false);
+	return;
+}
+void ConsoleChatUI::inputFunc()
+{
+	char inputChar;
+	while (true)
+	{
+		if (_kbhit())
+		{
+			screenLock.lock();
+			inputChar = _getch();
+			switch (inputChar)
+			{
+			case '\r':
+			case '\n':
+				this->inputFunc_switch1_case_r_case_n();
+				break;
+			case '\b':
+				this->inputFunc_switch1_case_b();
+				break;
+			case -32: // directional keys
+				inputChar = _getch();
+				this->inputFunc_switch1_case_32(inputChar);
+				break;
+			default:
+				this->inputFunc_switch1_case_default(inputChar);
+				break;
+			}
+			moveCursor(this->editCursorX, this->editCursorY);
+			this->screenLock.unlock();
+		}
+		else
+		{
+			std::this_thread::sleep_for(std::chrono::milliseconds(10));
+		}
+	}
+}
+void ConsoleChatUI::outputFunc(std::string outputMessage, bool saveHistory, bool screenLocked)
+{
+	if (saveHistory)
+		this->displayHistory.push_back(outputMessage);
+	if (!screenLocked)
+		this->screenLock.lock();
+	this->displlayHistorylength++;
+	if (outputMessage.find_first_of("\n") != std::string::npos)
+	{
+		while (outputMessage.find_first_of("\n") != std::string::npos)
+		{
+			this->outputFunc(outputMessage.substr(0, outputMessage.find_first_of("\n")), false, true);
+			if (outputMessage.find_first_of("\n") == outputMessage.size() - 1)
+			{
+				this->outputFunc("", false, true);
+				outputMessage.clear();
+				break;
+			}
+			outputMessage = outputMessage.substr(outputMessage.find_first_of("\n") + 1);
+		}
+		if (outputMessage.empty())
+		{
+			if (!screenLocked)
+				screenLock.unlock();
+			moveCursor(this->editCursorX, this->editCursorY);
+			return;
+		}
+	}
+	if (outputMessage.length() > this->terminalWidth)
+	{
+		while (outputMessage.length() > this->terminalWidth)
+		{
+			this->outputFunc(outputMessage.substr(0, this->terminalWidth), false, true);
+			outputMessage = outputMessage.substr(this->terminalWidth);
+		}
+		this->outputFunc(outputMessage, false, true);
+	}
+	else if (this->displayAreaCursorY >= this->displayAreaEndY)
+	{
+		this->repaintDisplayArea(true, true);
+		moveCursor(0, this->displayAreaCursorY);
+		std::cout << outputMessage << std::endl;
+	}
+	else
+	{
+		moveCursor(0, this->displayAreaCursorY + 1);
+		std::cout << outputMessage << std::endl;
+		this->displayAreaCursorY++;
+	}
+	if (!screenLocked)
+		this->screenLock.unlock();
+	moveCursor(this->editCursorX, this->editCursorY);
+	return;
 }
 #endif // CONSOLECHATUI_H

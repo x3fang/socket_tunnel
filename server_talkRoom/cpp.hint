@@ -1,0 +1,2 @@
+#define SERVERTALKROOM_API __declspec(dllexport)
+#define SERVERTALKROOM_API __declspec(dllimport)

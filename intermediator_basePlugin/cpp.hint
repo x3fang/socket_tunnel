@@ -1,0 +1,2 @@
+#define INTERMEDIATORBASEPLUGIN_API __declspec(dllexport)
+#define INTERMEDIATORBASEPLUGIN_API __declspec(dllimport)
