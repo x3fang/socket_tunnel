@@ -14,15 +14,15 @@
 #include <conio.h>
 /*
 													  showBegin     0
-.                                                                             1
-.                                                                            ....
-.                                                                            ....
-													  showEnd        n
-prompt-----------------------editBegin       n+1
-.                                                                             ..
-.                                                                             ..
-.                                                                             ..
-													  editEnd           m
+.                                                                   1
+.                                                                  ....
+.                                                                  ....
+													  showEnd       n
+prompt-----------------------editBegin                             n+1
+.                                                                  ....
+.                                                                  ....
+.                                                                  ....
+													  editEnd        m
 */
 class ConsoleChatUI
 {
