@@ -97,3 +97,9 @@ test.cpp
 test.cpp
 include/fliter_hTEST.cpp
 include/fliter_hTEST.cpp
+A_exeB/log/client.log
+client_plugin/server.cpp
+log/client.log
+log/showClientRunFun.log
+log/client.log
+log/showClientRunFun.log

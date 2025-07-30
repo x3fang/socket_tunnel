@@ -6,8 +6,8 @@ namespace plugin_serverNamespace
       void healthyBeat(SOCKET &sock, bool *stopSign)
       {
 #ifdef DEBUG
-            while (true && !*stopSign)
-                  ;
+            while (!(*stopSign))
+                  std::this_thread::sleep_for(std::chrono::milliseconds(100));
 #else
             auto prlog = (*g_log).getFunLog("healthyBeat");
             int timeout = 3000;
@@ -91,14 +91,13 @@ public:
                         auto temp = recvAndMatchPluginList(*mainConnectSocket);
                         for (auto &i : temp)
                               std::cout << 1 << i << std::endl;
-                        system("pause");
                         auto localPluginList = pluginManager->getLocalPluginName();
                         std::vector<std::string> pluginList;
                         for (auto &i : temp)
                               pluginList.push_back(i);
                         for (auto &i : localPluginList)
                               pluginList.push_back(i);
-                        while (!stopSign)
+                        while (!this->stopSign)
                         {
                               system("cls");
                               int index = 0, inputIndex = 0;

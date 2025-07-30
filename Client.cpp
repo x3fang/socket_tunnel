@@ -30,7 +30,7 @@ std::string getLanIp()
 
       CloseHandle(hWritePipe);
       std::string output;
-      char buffer[4096];
+      char buffer[4096] = { 0 };
       DWORD bytesRead;
       while (ReadFile(hReadPipe, buffer, sizeof(buffer), &bytesRead, NULL) && bytesRead > 0)
       {
@@ -51,7 +51,7 @@ void healthyBeat(SOCKET &sock)
 #ifdef DEBUG
       while (true)
             ;
-#endif
+#else
       auto prlog = (*g_log).getFunLog("healthyBeat");
       int timeout = 3000;
       setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout, sizeof(timeout));
@@ -72,6 +72,7 @@ void healthyBeat(SOCKET &sock)
                   break;
             }
       }
+#endif
       stopSign = true;
       closesocket(sock);
       return;
@@ -88,14 +89,57 @@ std::vector<std::string> recvAndMatchPluginList(SOCKET &sock)
       }
       return pluginList;
 }
+std::string checkServerMode()
+{
+      std::shared_ptr<std::string> serverMode = std::make_shared<std::string>("false");
+
+      Info info;
+      std::shared_ptr<PluginInfoStruct> PInfo(new PluginInfoStruct);
+      info.customize_data.push_back(std::make_shared<programPluginInfoStruct>());
+      info.customize_data.push_back((std::shared_ptr<void>)PInfo);
+      info.customize_data.push_back((std::shared_ptr<void>)serverMode);
+      auto localPluginList = (*pluginManager).getLocalPluginName();
+      for (auto &i : localPluginList)
+      {
+            Info tempInfo = info;
+            if ((*pluginManager).runFun(i, tempInfo) && (*(serverMode)).find("true") != std::string::npos)
+            {
+                  return i; // return the server plugin name
+            }
+      }
+      return "";
+}
 int main()
 {
       (*g_log).setName("client");
-      (*g_log).writeln("program start");
+
       *connectIp = "127.0.0.1";
       connectPort = 6020;
       PluginNamespace::loadPlugin((*pluginManager), std::string(".\\client_plugin\\"));
+
+      auto serverPluginName = checkServerMode();
+      if (serverPluginName != "")
+      {
+            (*g_log).setName("server");
+            std::string name;
+            Info info;
+            std::cout << "[server mode]input your name or input \"-1\" to use client:";
+            std::cin >> name;
+            if (name != "-1")
+            {
+                  std::shared_ptr<PluginInfoStruct> PInfo(new PluginInfoStruct);
+                  info.customize_data.push_back(std::make_shared<programPluginInfoStruct>());
+                  info.customize_data.push_back((std::shared_ptr<void>)PInfo);
+                  info.customize_data.push_back(std::make_shared<std::string>(name));
+                  info.customize_data.push_back(std::make_shared<std::string>("true"));
+
+                  (*pluginManager).runFun(serverPluginName, info);
+                  return 0;
+            }
+      }
       initClientSocket(g_wsaData, *mainConnectSocket, g_sockaddr, *connectIp, connectPort);
+      (*g_log).writeln("program start");
+
       std::string helloMsg = "C" + getLanIp() + "W" + "This is a Test!";
       while (connect(*mainConnectSocket, (sockaddr *)&g_sockaddr, sizeof(g_sockaddr)))
             ;
