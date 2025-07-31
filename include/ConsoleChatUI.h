@@ -39,7 +39,7 @@ private:
 	int displayHistoryVectorInputIndex = 0;
 	int displayAreaCursorY = 0;
 
-	std::string prompt;
+	std::string prompt_SplitLine;
 	std::vector<std::string> editingMessage;
 	std::vector<std::vector<std::string>> completedEditMessage;
 	int editBegin = 0, editEnd = 0;
@@ -47,13 +47,19 @@ private:
 	int editingMessageNumY = 0; // Actual location in editingMessage
 	int editEditingMessageVectorOutputBeginNum = 0, editEditingMessageVectorOutputBeginSection = 0;
 	int editEditingMessageVectorOutputEndNum = 0, editEditingMessageVectorOutputEndSection = 0;
+	int lastEditBegin = 0;
 
 public:
+	enum outputFormat {
+		None,
+		left,
+		right
+	};
 	ConsoleChatUI() = default;
 	~ConsoleChatUI() = default;
-	void setPrompt(std::string prompt)
+	void setPrompt(std::string prompt, char splitChar = '-')
 	{
-		this->prompt = prompt;
+		this->prompt_SplitLine = prompt + std::string(this->terminalWidth - prompt.length(), splitChar);
 		return;
 	}
 	void start()
@@ -82,7 +88,7 @@ public:
 		inputThread = std::jthread(&ConsoleChatUI::inputFunc, this);
 		return;
 	}
-	void outputFunc(std::string outputMessage, bool saveHistory = true, bool screenLocked = false);
+	void outputFunc(std::string outputMessage, bool saveHistory = true, bool screenLocked = false, int outputWordsColor = 0, outputFormat outputFormat = None);
 	std::vector<std::string> getUserInputByOnce()
 	{
 		if (this->completedEditMessage.empty())
@@ -177,14 +183,10 @@ void ConsoleChatUI::repaintEditArea(bool lock_screenLock, bool partialRepaint, b
 {
 	if (!lock_screenLock)
 		screenLock.lock();
-	moveCursor(0, this->editBegin);
-	if (!onlyClear)
+	if (!onlyClear && lastEditBegin != this->editBegin)
 	{
-		std::cout << this->prompt;
-		for (int i = 0; i < terminalWidth - this->prompt.length(); i++)
-		{
-			std::cout << "-";
-		}
+		moveCursor(0, this->editBegin);
+		std::cout << this->prompt_SplitLine;
 	}
 
 	moveCursor(0, this->editBegin + 1);
@@ -195,9 +197,7 @@ void ConsoleChatUI::repaintEditArea(bool lock_screenLock, bool partialRepaint, b
 	std::cout << "\033[K";
 	if (onlyClear)
 	{
-		if (!lock_screenLock)
-			screenLock.unlock();
-		return;
+		goto RETURN_GOTO;
 	}
 
 	// paint edit Area
@@ -210,6 +210,7 @@ void ConsoleChatUI::repaintEditArea(bool lock_screenLock, bool partialRepaint, b
 			std::cout << std::endl;
 		}
 	}
+RETURN_GOTO:
 	if (!lock_screenLock)
 		screenLock.unlock();
 	return;
@@ -416,7 +417,7 @@ void ConsoleChatUI::inputFunc()
 		}
 	}
 }
-void ConsoleChatUI::outputFunc(std::string outputMessage, bool saveHistory, bool screenLocked)
+void ConsoleChatUI::outputFunc(std::string outputMessage, bool saveHistory, bool screenLocked, int outputWordsColor, outputFormat outputFormat)
 {
 	if (saveHistory)
 		this->displayHistory.push_back(outputMessage);
@@ -427,10 +428,10 @@ void ConsoleChatUI::outputFunc(std::string outputMessage, bool saveHistory, bool
 	{
 		while (outputMessage.find_first_of("\n") != std::string::npos)
 		{
-			this->outputFunc(outputMessage.substr(0, outputMessage.find_first_of("\n")), false, true);
+			this->outputFunc(outputMessage.substr(0, outputMessage.find_first_of("\n")), false, true, outputWordsColor, outputFormat);
 			if (outputMessage.find_first_of("\n") == outputMessage.size() - 1)
 			{
-				this->outputFunc("", false, true);
+				this->outputFunc("", false, true, outputWordsColor, outputFormat);
 				outputMessage.clear();
 				break;
 			}
@@ -448,16 +449,35 @@ void ConsoleChatUI::outputFunc(std::string outputMessage, bool saveHistory, bool
 	{
 		while (outputMessage.length() > this->terminalWidth)
 		{
-			this->outputFunc(outputMessage.substr(0, this->terminalWidth), false, true);
+			this->outputFunc(outputMessage.substr(0, this->terminalWidth), false, true, outputWordsColor, outputFormat);
 			outputMessage = outputMessage.substr(this->terminalWidth);
 		}
-		this->outputFunc(outputMessage, false, true);
+		this->outputFunc(outputMessage, false, true, outputWordsColor, outputFormat);
 	}
 	else if (this->displayAreaCursorY >= this->displayAreaEndY)
 	{
 		this->repaintDisplayArea(true, true);
 		moveCursor(0, this->displayAreaCursorY);
-		std::cout << outputMessage << std::endl;
+		if (outputWordsColor != 0 && outputWordsColor > 0 && outputWordsColor <= 15)
+		{
+			WORD wColor = (outputWordsColor & 0x0F);
+			SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), wColor);
+		}
+		switch (outputFormat)
+		{
+		case outputFormat::left:
+			std::cout << std::setw(this->terminalWidth) << std::setiosflags(std::ios::left) << outputMessage;
+			break;
+		case outputFormat::right:
+		default:
+			std::cout << outputMessage;
+			break;
+		}
+		std::cout << std::endl;
+		if (outputWordsColor != 0 && outputWordsColor > 0 && outputWordsColor <= 15)
+		{
+			SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 15);
+		}
 	}
 	else
 	{
