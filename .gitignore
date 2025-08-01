@@ -94,3 +94,9 @@
 /windows/server_delPagePlugin/x64
 /windows/server_talkRoom/x64
 /Ubuntu/intermediator/obj/x64/Debug
+/Ubuntu/basePlugin/obj/x64/Release
+/Ubuntu/intermediator/obj/x64/Release
+/Ubuntu/intermediatorTalkRoom/obj/x64/Release
+/windows/clientEXE/x64/Release
+/windows/intermediatorEXE/x64/Release
+/windows/intermediator_talkRoom/x64/Release

@@ -27,37 +27,25 @@
     <ClInclude Include="pch.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="../../../serverdll\include/globalDefine.h">
+    <ClInclude Include="..\include\globalDefine.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="../../../serverdll\include/log.h">
+    <ClInclude Include="..\include\log.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="../../../serverdll\include/Plugin.h">
+    <ClInclude Include="..\include\MD5.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="../../../serverdll\include/serverStruct.h">
+    <ClInclude Include="..\include\Plugin.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="../include/globalDefine.h">
+    <ClInclude Include="..\include\programPluginInfo.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="../include/log.h">
+    <ClInclude Include="..\include\serverStruct.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="../include/MD5.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="../include/Plugin.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="../include/programPluginInfo.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="../include/serverStruct.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="../include/sign.h">
+    <ClInclude Include="..\include\sign.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>

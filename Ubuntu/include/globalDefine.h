@@ -83,7 +83,7 @@ int recv(SOCKET& sock, std::string& data)
 		while (true)
 		{
 			int res = recv(sock, buf, 1, 0);
-			if (res <=0)
+			if (res <= 0)
 				return errno;
 			if (strlen(buf) > 0 && buf[0] == '\r')
 			{
@@ -109,8 +109,7 @@ int recv(SOCKET& sock, std::string& data)
 	}
 	catch (const std::exception& e)
 	{
-		std::cout << e.what() << '\n';
-		return errno;
+		throw e.what();
 	}
 	return -1;
 }

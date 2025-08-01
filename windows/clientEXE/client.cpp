@@ -113,7 +113,7 @@ int main()
 {
 	(*g_log).setName("client");
 
-	*connectIp = "43.138.236.72";
+	*connectIp = "192.168.1.77";
 	connectPort = 6020;
 	PluginNamespace::loadPlugin((*pluginManager), std::string(".\\client_plugin\\"), "dll");
 

@@ -24,7 +24,7 @@ int initServer(SOCKET& ListenSocket, sockaddr_in& sockAddr, int port)
 	sockAddr.sin_addr.s_addr = INADDR_ANY;
 	sockAddr.sin_port = htons(port);
 	iResult = bind(ListenSocket, (sockaddr*)&sockAddr, sizeof(sockAddr));
-	if (iResult <= 0)
+	if (iResult < 0)
 	{
 		int errorCode = 0;
 		errorCode = errno;
@@ -32,7 +32,7 @@ int initServer(SOCKET& ListenSocket, sockaddr_in& sockAddr, int port)
 		return errorCode;
 	}
 	iResult = listen(ListenSocket, SOMAXCONN);
-	if (iResult == SOCKET_ERROR)
+	if (iResult < 0)
 	{
 		int errorCode = 0;
 		errorCode = errno;
@@ -59,7 +59,7 @@ int registerCOS(SOCKET socket,
 	prlog->writeln("SEID:" + SEID);
 	if (infoMap.find(SEID) == infoMap.end())
 	{
-		infoMap[SEID] = std::make_shared<IndividualInfoStruct>(SEID, wanIp, lanIp, systemKind, commit, socket, INVALID_SOCKET);
+		infoMap[SEID] = std::make_shared<IndividualInfoStruct>(SEID, wanIp, lanIp, systemKind, commit, socket, -1);
 		SEID_res = SEID;
 		return SUCCESS_STATUS;
 	}
@@ -83,16 +83,16 @@ int del(const std::string& SEID, std::map<std::string, std::shared_ptr<Individua
 		else if (status != SUCCESS_STATUS)
 			return status;
 		(*(*infoMap)[SEID]).del = true;
-		if (*(*infoMap)[SEID]->healthSocket != INVALID_SOCKET)
+		if (*(*infoMap)[SEID]->healthSocket > 0)
 		{
 			send(*(*infoMap)[SEID]->healthSocket, "del");
-			closesocket(*(*infoMap)[SEID]->healthSocket);
-			*(*infoMap)[SEID]->healthSocket = INVALID_SOCKET;
+			close(*(*infoMap)[SEID]->healthSocket);
+			*(*infoMap)[SEID]->healthSocket = -1;
 			healthyBeatSOCKETList.erase(std::find(healthyBeatSOCKETList.begin(), healthyBeatSOCKETList.end(), SEID));
 		}
 		send(*(*infoMap)[SEID]->commSocket, "end");
-		closesocket(*(*infoMap)[SEID]->commSocket);
-		*(*infoMap)[SEID]->commSocket = INVALID_SOCKET;
+		close(*(*infoMap)[SEID]->commSocket);
+		*(*infoMap)[SEID]->commSocket = -1;
 		(*(*infoMap)[SEID]).unLock();
 		(*infoMap).erase(SEID);
 		return SUCCESS_STATUS;
@@ -158,7 +158,7 @@ void sendPluginList(PluginNamespace::PluginManager& pluginManager, SOCKET& sock)
 void healthyBeat()
 {
 #ifdef DEBUG
-	while (true)
+	while (!stopFlag)
 		;
 #else
 	static auto prlog = (*g_log).getFunLog("healthyBeat");
@@ -322,13 +322,13 @@ int main()
 		aptSocket = accept(*mainConnectSocket, (sockaddr*)&aptsocketAddr, &len);
 		(*g_log).writeln("accept a connect");
 
-		if (aptSocket != INVALID_SOCKET)
+		if (aptSocket > 0)
 		{
 			recv(aptSocket, buf);
 			if (buf.length() <= 1)
 			{
 				(*g_log).writeln("invalid connect");
-				closesocket(aptSocket);
+				close(aptSocket);
 				continue;
 			}
 #if windowsSystem
@@ -407,7 +407,7 @@ int main()
 			failRegister:
 				(*g_log).writeln("Register fail");
 				send(aptSocket, "FAIL");
-				closesocket(aptSocket);
+				close(aptSocket);
 			}
 		}
 	}

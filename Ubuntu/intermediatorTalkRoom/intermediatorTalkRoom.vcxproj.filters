@@ -2,7 +2,7 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <Filter Include="头文件">
-      <UniqueIdentifier>{54cd89dc-9c62-42c9-a175-8825cff05c92}</UniqueIdentifier>
+      <UniqueIdentifier>{1cc1eef5-8cf9-401f-a100-b898f923f3de}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -27,8 +27,8 @@
     <ClInclude Include="..\include\sign.h">
       <Filter>头文件</Filter>
     </ClInclude>
-  </ItemGroup>
-  <ItemGroup>
-    <ClCompile Include="intermediator.cpp" />
+    <ClInclude Include="..\include\fliter.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

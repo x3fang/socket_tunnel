@@ -1,2 +1,0 @@
-#define INTERMEDIATORDELPAGE_API __declspec(dllexport)
-#define INTERMEDIATORDELPAGE_API __declspec(dllimport)

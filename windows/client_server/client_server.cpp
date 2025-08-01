@@ -99,8 +99,6 @@ public:
 				std::string buf;
 
 				auto temp = recvAndMatchPluginList(*mainConnectSocket);
-				for (auto& i : temp)
-					std::cout << 1 << i << std::endl;
 				auto localPluginList = pluginManager->getLocalPluginName();
 				std::vector<std::string> pluginList;
 				for (auto& i : temp)

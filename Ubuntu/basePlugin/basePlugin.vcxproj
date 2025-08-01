@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project DefaultTargets="Build" ToolsVersion="Current" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|ARM">
       <Configuration>Debug</Configuration>
@@ -35,14 +35,15 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{1989e1e6-8bc5-4af9-aa32-de35d31e2ecc}</ProjectGuid>
+    <ProjectGuid>{edfab261-38d9-4ff4-a506-a1e0f9da19e1}</ProjectGuid>
     <Keyword>Linux</Keyword>
-    <RootNamespace>intermediator</RootNamespace>
+    <RootNamespace>basePlugin</RootNamespace>
     <MinimumVisualStudioVersion>15.0</MinimumVisualStudioVersion>
     <ApplicationType>Linux</ApplicationType>
     <ApplicationTypeRevision>1.0</ApplicationTypeRevision>
     <TargetLinuxPlatform>Generic</TargetLinuxPlatform>
-    <LinuxProjectType>{D51BCBC9-82E9-4017-911E-C93873C4EA2B}</LinuxProjectType>
+    <LinuxProjectType>{2238F9CD-F817-4ECC-BD14-2524D2669B35}</LinuxProjectType>
+    <ProjectName>intermediator_basePlugin</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'" Label="Configuration">
@@ -59,9 +60,11 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <UseDebugLibraries>true</UseDebugLibraries>
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <UseDebugLibraries>false</UseDebugLibraries>
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'" Label="Configuration">
     <UseDebugLibraries>false</UseDebugLibraries>
@@ -75,21 +78,27 @@
   <ImportGroup Label="PropertySheets" />
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <MultiProcNumber>8</MultiProcNumber>
-    <OutDir>$(ProjectDir)bin\$(Platform)\$(Configuration)\A_exe\</OutDir>
-    <IntDir>$(ProjectDir)obj\$(Platform)\$(Configuration)\tempFile\$(ProjectName)\</IntDir>
-    <RemoteOutRelDir>$(Configuration)/A_exe/</RemoteOutRelDir>
-    <RemoteDeployDir>$(RemoteRootDir)/$(Configuration)/A_exe/</RemoteDeployDir>
+    <MultiProcNumber>16</MultiProcNumber>
+    <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\A_exe\plugin\</OutDir>
+    <IntDir>$(SolutionDir)$(Platform)\$(Configuration)\tempFile\$(ProjectName)\</IntDir>
+    <TargetName>$(ProjectName)</TargetName>
+    <TargetExt>.so</TargetExt>
+    <RemoteOutRelDir>$(Configuration)/A_exe/plugin/</RemoteOutRelDir>
+    <RemoteDeployDir>$(RemoteRootDir)/$(Configuration)/A_exe/plugin</RemoteDeployDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\A_out\</OutDir>
-    <IntDir>$(ProjectDir)obj\$(Platform)\$(Configuration)\tempFile\$(ProjectName)\</IntDir>
     <MultiProcNumber>16</MultiProcNumber>
+    <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\A_so\</OutDir>
+    <IntDir>$(ProjectDir)obj\$(Platform)\$(Configuration)\tempFile\$(ProjectName)\</IntDir>
+    <TargetName>$(ProjectName)</TargetName>
+    <RemoteOutRelDir>$(Configuration)/A_exe/plugin/</RemoteOutRelDir>
+    <RemoteDeployDir>$(RemoteRootDir)/$(Configuration)/A_exe/plugin</RemoteDeployDir>
   </PropertyGroup>
   <ItemGroup>
-    <ClCompile Include="intermediator.cpp" />
+    <ClCompile Include="intermediator_basePlugin.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\include\fliter.h" />
     <ClInclude Include="..\include\globalDefine.h" />
     <ClInclude Include="..\include\intermediatorStruct.h" />
     <ClInclude Include="..\include\log.h" />
@@ -100,11 +109,20 @@
   </ItemGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
+      <Optimization>Full</Optimization>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <LinkTimeOptimization>true</LinkTimeOptimization>
+      <PositionIndependentCode>true</PositionIndependentCode>
       <CppLanguageStandard>c++20</CppLanguageStandard>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
+      <Optimization>MaxSpeed</Optimization>
+      <PositionIndependentCode>true</PositionIndependentCode>
       <CppLanguageStandard>c++20</CppLanguageStandard>
     </ClCompile>
   </ItemDefinitionGroup>

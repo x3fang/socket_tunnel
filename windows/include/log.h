@@ -22,7 +22,7 @@
 namespace logNameSpace
 {
 	// 通过stat结构体 获得文件大小，单位字节
-	size_t getFileSize1(const char *fileName)
+	size_t getFileSize1(const char* fileName)
 	{
 
 		if (fileName == NULL)
@@ -46,17 +46,17 @@ namespace logNameSpace
 	{
 	public:
 		funLog() = default;
-		funLog(const std::string &name);
-		void write(const std::string &msg, const std::source_location &location = std::source_location::current());
-		void writeln(const std::string &msg, const std::source_location &location = std::source_location::current());
-		void writeln(const int &msg, const std::source_location &location = std::source_location::current());
-		void write(std::vector<std::string> &msg, const std::source_location &location = std::source_location::current());
-		funLog &operator<<(const std::string &msg);
-		funLog &operator<<(const int &msg);
-		funLog &operator<<(const char &msg);
-		funLog &operator<<(ENDL &e)
+		funLog(const std::string& name);
+		void write(const std::string& msg, const std::source_location& location = std::source_location::current());
+		void writeln(const std::string& msg, const std::source_location& location = std::source_location::current());
+		void writeln(const int& msg, const std::source_location& location = std::source_location::current());
+		void write(std::vector<std::string>& msg, const std::source_location& location = std::source_location::current());
+		funLog& operator<<(const std::string& msg);
+		funLog& operator<<(const int& msg);
+		funLog& operator<<(const char& msg);
+		funLog& operator<<(ENDL& e)
 		{
-			const std::source_location &location = std::source_location::current();
+			const std::source_location& location = std::source_location::current();
 			write("\n", location);
 			return *this;
 		}
@@ -74,7 +74,7 @@ namespace logNameSpace
 			release = 1
 		};
 		Log();
-		Log(const Log &other)
+		Log(const Log& other)
 		{
 			this->msg = other.msg;
 			this->logName = other.logName;
@@ -84,26 +84,26 @@ namespace logNameSpace
 		}
 		Log(const std::string name, int logMaxSize = 2048);
 		~Log();
-		Log *operator=(Log &other);
-		Log *operator+(ENDL endl);
-		Log &operator=(Log &&other) noexcept;
+		Log* operator=(Log& other);
+		Log* operator+(ENDL endl);
+		Log& operator=(Log&& other) noexcept;
 		void mustChangeFlie();
-		void write(const std::string &msg, const std::source_location &location = std::source_location::current());
-		void writeln(const std::string &msg, const std::source_location &location = std::source_location::current());
-		void write(std::vector<std::string> &msg, const std::source_location &location = std::source_location::current());
-		void setName(const std::string &name) { this->logName = name; }
-		Log &operator<<(const std::string &msg);
-		Log &operator<<(const int msg);
-		Log &operator<<(ENDL &e)
+		void write(const std::string& msg, const std::source_location& location = std::source_location::current());
+		void writeln(const std::string& msg, const std::source_location& location = std::source_location::current());
+		void write(std::vector<std::string>& msg, const std::source_location& location = std::source_location::current());
+		void setName(const std::string& name) { this->logName = name; }
+		Log& operator<<(const std::string& msg);
+		Log& operator<<(const int msg);
+		Log& operator<<(ENDL& e)
 		{
-			const std::source_location &location = std::source_location::current();
+			const std::source_location& location = std::source_location::current();
 			write("\n", location);
 			return *this;
 		}
 		void setDetailLevel(detailLevelEnum detailLevel) { this->detailLevel = detailLevel; }
 		detailLevelEnum getDetailLevel() { return this->detailLevel; }
 		std::shared_ptr<funLog>
-		getFunLog(const std::string &name);
+			getFunLog(const std::string& name);
 
 	private:
 		detailLevelEnum detailLevel = detailLevelEnum::release;
@@ -118,12 +118,12 @@ namespace logNameSpace
 	};
 
 	// funLog fun
-	funLog::funLog(const std::string &name)
+	funLog::funLog(const std::string& name)
 	{
 		this->funlog = std::shared_ptr<Log>(std::make_shared<Log>(name));
 		this->name = name;
 	}
-	void funLog::write(std::vector<std::string> &msg, const std::source_location &location)
+	void funLog::write(std::vector<std::string>& msg, const std::source_location& location)
 	{
 		for (auto it = msg.begin(); it != msg.end(); ++it)
 		{
@@ -132,33 +132,33 @@ namespace logNameSpace
 		funlog->write(msg, location);
 		return;
 	}
-	void funLog::writeln(const std::string &msg, const std::source_location &location)
+	void funLog::writeln(const std::string& msg, const std::source_location& location)
 	{
 		funlog->writeln(msg, location);
 	}
-	void funLog::writeln(const int &msg, const std::source_location &location)
+	void funLog::writeln(const int& msg, const std::source_location& location)
 	{
 		funlog->writeln(std::to_string(msg), location);
 	}
-	void funLog::write(const std::string &msg, const std::source_location &location)
+	void funLog::write(const std::string& msg, const std::source_location& location)
 	{
 		funlog->write(msg, location);
 	}
-	funLog &funLog::operator<<(const std::string &msg)
+	funLog& funLog::operator<<(const std::string& msg)
 	{
-		const std::source_location &location = std::source_location::current();
+		const std::source_location& location = std::source_location::current();
 		funlog->write(msg, location);
 		return *this;
 	}
-	funLog &funLog::operator<<(const int &msg)
+	funLog& funLog::operator<<(const int& msg)
 	{
-		const std::source_location &location = std::source_location::current();
+		const std::source_location& location = std::source_location::current();
 		funlog->write(std::to_string(msg), location);
 		return *this;
 	}
-	funLog &funLog::operator<<(const char &msg)
+	funLog& funLog::operator<<(const char& msg)
 	{
-		const std::source_location &location = std::source_location::current();
+		const std::source_location& location = std::source_location::current();
 		funlog->write(std::string(1, msg), location);
 		return *this;
 	}
@@ -184,11 +184,11 @@ namespace logNameSpace
 	{
 		logFile.close();
 	}
-	Log *Log::operator=(Log &other)
+	Log* Log::operator=(Log& other)
 	{
 		return &other;
 	}
-	Log &Log::operator=(Log &&other) noexcept
+	Log& Log::operator=(Log&& other) noexcept
 	{
 		this->msg = other.msg;
 		this->logName = other.logName;
@@ -221,12 +221,12 @@ namespace logNameSpace
 			logFile.close();
 		logName = temp;
 	}
-	void Log::writeln(const std::string &msg, const std::source_location &location)
+	void Log::writeln(const std::string& msg, const std::source_location& location)
 	{
 		this->write(msg + "\n", location);
 		return;
 	}
-	void Log::write(const std::string &msg, const std::source_location &location)
+	void Log::write(const std::string& msg, const std::source_location& location)
 	{
 		try
 		{
@@ -245,11 +245,11 @@ namespace logNameSpace
 			{
 			case detailLevelEnum::debug:
 				prefix = "[DEBUG][" + getTime() +
-						 "] [file: " + location.file_name() +
-						 " | function: " + location.function_name() +
-						 " | line:" + std::to_string(location.line()) +
-						 " | column:" + std::to_string(location.column()) +
-						 "]";
+					"] [file: " + location.file_name() +
+					" | function: " + location.function_name() +
+					" | line:" + std::to_string(location.line()) +
+					" | column:" + std::to_string(location.column()) +
+					"]";
 				break;
 
 			case detailLevelEnum::release:
@@ -264,7 +264,7 @@ namespace logNameSpace
 		mustChangeFlie();
 		return;
 	}
-	void Log::write(std::vector<std::string> &msg, const std::source_location &location)
+	void Log::write(std::vector<std::string>& msg, const std::source_location& location)
 	{
 		for (auto it = msg.begin(); it != msg.end(); ++it)
 		{
@@ -273,18 +273,18 @@ namespace logNameSpace
 		mustChangeFlie();
 		return;
 	}
-	Log &Log::operator<<(const std::string &msg)
+	Log& Log::operator<<(const std::string& msg)
 	{
-		const std::source_location &location = std::source_location::current();
+		const std::source_location& location = std::source_location::current();
 		while (this->writeFlie->exchange(true, std::memory_order_acquire))
 			;
 		write(std::string(msg), location);
 		this->writeFlie->store(false, std::memory_order_release);
 		return *this;
 	}
-	Log &Log::operator<<(const int msg)
+	Log& Log::operator<<(const int msg)
 	{
-		const std::source_location &location = std::source_location::current();
+		const std::source_location& location = std::source_location::current();
 		while (this->writeFlie->exchange(true, std::memory_order_acquire))
 			;
 		write(std::to_string(msg), location);
@@ -292,7 +292,7 @@ namespace logNameSpace
 		return *this;
 	}
 
-	std::shared_ptr<funLog> Log::getFunLog(const std::string &funName)
+	std::shared_ptr<funLog> Log::getFunLog(const std::string& funName)
 	{
 		if (funlogList.find(funName) == funlogList.end())
 			funlogList[funName] = std::make_shared<funLog>(funName);
@@ -308,11 +308,11 @@ namespace logNameSpace
 		localtime_r(&now, &tm_t);
 #endif
 		return (std::to_string(tm_t.tm_year + 1900) +
-				"/" + std::to_string(tm_t.tm_mon + 1) +
-				"/" + std::to_string(tm_t.tm_mday) +
-				":" + std::to_string(tm_t.tm_hour) +
-				":" + std::to_string(tm_t.tm_min) +
-				":" + std::to_string(tm_t.tm_sec));
+			"/" + std::to_string(tm_t.tm_mon + 1) +
+			"/" + std::to_string(tm_t.tm_mday) +
+			":" + std::to_string(tm_t.tm_hour) +
+			":" + std::to_string(tm_t.tm_min) +
+			":" + std::to_string(tm_t.tm_sec));
 	}
 	bool Log::createDirectory(std::string folder)
 	{
@@ -321,7 +321,6 @@ namespace logNameSpace
 		sub.reserve(folder.size());
 		for (auto it = folder.begin(); it != folder.end(); ++it)
 		{
-			// cout << *(folder.end()-1) << endl;
 			const char c = *it;
 			sub.push_back(c);
 			if (c == '\\' || it == folder.end() - 1)

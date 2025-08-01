@@ -82,7 +82,9 @@
     <TargetName>serverdelPagePlugin</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <TargetName>serverdelPagePlugin</TargetName>
+    <TargetName>$(ProjectName)</TargetName>
+    <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\A_dll\</OutDir>
+    <IntDir>$(Platform)\$(Configuration)\tempFile\$(ProjectName)\</IntDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -153,6 +155,8 @@
       <AdditionalIncludeDirectories>$(SolutionDir)include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -166,10 +170,6 @@
     <None Include="cpp.hint" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\..\serverdll\include\globalDefine.h" />
-    <ClInclude Include="..\..\..\serverdll\include\log.h" />
-    <ClInclude Include="..\..\..\serverdll\include\Plugin.h" />
-    <ClInclude Include="..\..\..\serverdll\include\serverStruct.h" />
     <ClInclude Include="..\include\globalDefine.h" />
     <ClInclude Include="..\include\log.h" />
     <ClInclude Include="..\include\MD5.h" />

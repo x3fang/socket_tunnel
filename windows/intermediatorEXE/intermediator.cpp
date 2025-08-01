@@ -16,9 +16,9 @@ WSADATA g_wsaData;
 #endif
 
 #if windowsSystem
-int initServer(SOCKET &ListenSocket, WSADATA &wsaData, sockaddr_in &sockAddr, int port)
+int initServer(SOCKET& ListenSocket, WSADATA& wsaData, sockaddr_in& sockAddr, int port)
 #else
-int initServer(SOCKET &ListenSocket, sockaddr_in &sockAddr, int port)
+int initServer(SOCKET& ListenSocket, sockaddr_in& sockAddr, int port)
 #endif
 {
 	int iResult = 0;
@@ -45,7 +45,7 @@ int initServer(SOCKET &ListenSocket, sockaddr_in &sockAddr, int port)
 	sockAddr.sin_family = AF_INET;
 	sockAddr.sin_addr.s_addr = INADDR_ANY;
 	sockAddr.sin_port = htons(port);
-	iResult = bind(ListenSocket, (sockaddr *)&sockAddr, sizeof(sockAddr));
+	iResult = bind(ListenSocket, (sockaddr*)&sockAddr, sizeof(sockAddr));
 	if (iResult == SOCKET_ERROR)
 	{
 		int errorCode = 0;
@@ -74,18 +74,18 @@ int initServer(SOCKET &ListenSocket, sockaddr_in &sockAddr, int port)
 	}
 	return SUCCESS_STATUS;
 }
-const std::string createSEID(const std::string &temp)
+const std::string createSEID(const std::string& temp)
 {
 	MD5::MD5 md5;
 	return md5.encode(temp);
 }
 int registerCOS(SOCKET socket,
-				const std::string &wanIp,
-				const std::string &lanIp,
-				int systemKind,
-				const std::string &commit,
-				std::string &SEID_res,
-				std::map<std::string, std::shared_ptr<IndividualInfoStruct>> &infoMap)
+	const std::string& wanIp,
+	const std::string& lanIp,
+	int systemKind,
+	const std::string& commit,
+	std::string& SEID_res,
+	std::map<std::string, std::shared_ptr<IndividualInfoStruct>>& infoMap)
 {
 	static auto prlog = (*g_log).getFunLog("registerCOS");
 	std::string SEID = createSEID(lanIp + wanIp + std::to_string(systemKind) + commit);
@@ -98,15 +98,15 @@ int registerCOS(SOCKET socket,
 	}
 	return FAIL_STATUS;
 }
-inline int registerClient(SOCKET socket, const std::string &wanIp, const std::string &lanIp, int systemKind, const std::string &commit, std::string &SEID_res)
+inline int registerClient(SOCKET socket, const std::string& wanIp, const std::string& lanIp, int systemKind, const std::string& commit, std::string& SEID_res)
 {
 	return registerCOS(socket, wanIp, lanIp, systemKind, commit, SEID_res, *ClientInfo);
 }
-inline int registerServer(SOCKET socket, const std::string &wanIp, const std::string &lanIp, int systemKind, const std::string &commit, std::string &SEID_res)
+inline int registerServer(SOCKET socket, const std::string& wanIp, const std::string& lanIp, int systemKind, const std::string& commit, std::string& SEID_res)
 {
 	return registerCOS(socket, wanIp, lanIp, systemKind, commit, SEID_res, *ServerInfo);
 }
-int del(const std::string &SEID, std::map<std::string, std::shared_ptr<IndividualInfoStruct>> *infoMap)
+int del(const std::string& SEID, std::map<std::string, std::shared_ptr<IndividualInfoStruct>>* infoMap)
 {
 	if ((*infoMap).find(SEID) != (*infoMap).end())
 	{
@@ -132,29 +132,29 @@ int del(const std::string &SEID, std::map<std::string, std::shared_ptr<Individua
 	}
 	return FAIL_STATUS;
 }
-inline bool find(const std::string &SEID, std::shared_ptr<std::map<std::string, std::shared_ptr<IndividualInfoStruct>>> infoMap)
+inline bool find(const std::string& SEID, std::shared_ptr<std::map<std::string, std::shared_ptr<IndividualInfoStruct>>> infoMap)
 {
 	return (*infoMap).find(SEID) != (*infoMap).end();
 }
-int delClient(const std::string &SEID)
+int delClient(const std::string& SEID)
 {
 	static auto prlog = (*g_log).getFunLog("delClient");
 	prlog->writeln("Del client's SEID:" + SEID);
 	return del(SEID, &*ClientInfo);
 }
-int delServer(const std::string &SEID)
+int delServer(const std::string& SEID)
 {
 	static auto prlog = (*g_log).getFunLog("delServer");
 	prlog->writeln("Del server's SEID:" + SEID);
 	return del(SEID, &*ServerInfo);
 }
 
-bool IsValidIP(const char *ip)
+bool IsValidIP(const char* ip)
 {
 	in_addr addr;
 	return inet_pton(AF_INET, ip, &addr) == 1;
 }
-int arrangeRegister(const std::string &buf, std::string &lanIp_res, int &systemKind_res, std::string &commit_res)
+int arrangeRegister(const std::string& buf, std::string& lanIp_res, int& systemKind_res, std::string& commit_res)
 {
 	static auto prlog = (*g_log).getFunLog("arrangeRegister");
 	int LSS = static_cast<int>(buf.find_first_not_of("0123456789.", 1)); // lanIp and system kinds separator
@@ -180,10 +180,10 @@ int arrangeRegister(const std::string &buf, std::string &lanIp_res, int &systemK
 	}
 	return FAIL_STATUS;
 }
-void sendPluginList(PluginNamespace::PluginManager &pluginManager, SOCKET &sock)
+void sendPluginList(PluginNamespace::PluginManager& pluginManager, SOCKET& sock)
 {
 	auto pluginList = pluginManager.getAllPluginName();
-	for (auto &pluginName : pluginList)
+	for (auto& pluginName : pluginList)
 		send(sock, pluginName);
 	send(sock, "end");
 	return;
@@ -191,7 +191,7 @@ void sendPluginList(PluginNamespace::PluginManager &pluginManager, SOCKET &sock)
 void healthyBeat()
 {
 #ifdef DEBUG
-	while (true)
+	while (!stopFlag)
 		;
 #else
 	static auto prlog = (*g_log).getFunLog("healthyBeat");
@@ -203,18 +203,18 @@ void healthyBeat()
 		if (!healthyBeatSOCKETList.empty())
 		{
 			auto radom = random_engine();
-			for (auto &healthyInfo : healthyBeatSOCKETList)
+			for (auto& healthyInfo : healthyBeatSOCKETList)
 			{
 				int timeout = 3000;
-				setsockopt(healthyInfo.healthSocket, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout, sizeof(timeout));
-				setsockopt(healthyInfo.healthSocket, SOL_SOCKET, SO_SNDTIMEO, (char *)&timeout, sizeof(timeout));
+				setsockopt(healthyInfo.healthSocket, SOL_SOCKET, SO_RCVTIMEO, (char*)&timeout, sizeof(timeout));
+				setsockopt(healthyInfo.healthSocket, SOL_SOCKET, SO_SNDTIMEO, (char*)&timeout, sizeof(timeout));
 				send(healthyInfo.healthSocket, std::to_string(radom));
 				recv(healthyInfo.healthSocket, buf);
 				if (buf != std::to_string(radom))
 				{
 					prlog->writeln(std::string("one ") + std::string((healthyInfo.server ? "server" : "client")) +
-								   " disconnect\n" + "SEID:" +
-								   healthyInfo.SEID);
+						" disconnect\n" + "SEID:" +
+						healthyInfo.SEID);
 				}
 				buf.clear();
 			}
@@ -338,13 +338,13 @@ int main()
 	healthyBeatThread = std::thread(healthyBeat);
 	(*g_log).writeln("created healthyBeat");
 	std::cout << "server start" << std::endl
-			  << "listening ip:" << *connectIp << std::endl
-			  << "listening port:" << connectPort << std::endl;
+		<< "listening ip:" << *connectIp << std::endl
+		<< "listening port:" << connectPort << std::endl;
 	while (true)
 	{
 		std::string buf;
 		SOCKET aptSocket;
-		sockaddr_in aptsocketAddr = {0};
+		sockaddr_in aptsocketAddr = { 0 };
 #if windowsSystem
 		int len = sizeof(aptsocketAddr);
 #else
@@ -352,7 +352,7 @@ int main()
 #endif
 
 		(*g_log).writeln("waiting for connect");
-		aptSocket = accept(*mainConnectSocket, (sockaddr *)&aptsocketAddr, &len);
+		aptSocket = accept(*mainConnectSocket, (sockaddr*)&aptsocketAddr, &len);
 		(*g_log).writeln("accept a connect");
 
 		if (aptSocket != INVALID_SOCKET)
@@ -381,10 +381,10 @@ int main()
 					if (registerClient(aptSocket, wanIp, lanIp, systemKind, commit, SEID) == SUCCESS_STATUS)
 					{
 						(*g_log).writeln("\nRegister client,SEID:" + SEID +
-										 "\nwan ip:" + wanIp +
-										 "\nlan ip:" + lanIp +
-										 "\nsystemKind:" + (systemKind == 0 ? "Windows" : "Linux") +
-										 "\ncommit:" + commit);
+							"\nwan ip:" + wanIp +
+							"\nlan ip:" + lanIp +
+							"\nsystemKind:" + (systemKind == 0 ? "Windows" : "Linux") +
+							"\ncommit:" + commit);
 						send(aptSocket, "OK");
 						send(aptSocket, SEID);
 
@@ -402,10 +402,10 @@ int main()
 					if (registerServer(aptSocket, wanIp, lanIp, systemKind, commit, SEID) == SUCCESS_STATUS)
 					{
 						(*g_log).writeln("\nRegister server,SEID:" + SEID +
-										 "\nwan ip:" + wanIp +
-										 "\nlan ip:" + lanIp +
-										 "\nsystemKind:" + (systemKind == 0 ? "Windows" : "Linux") +
-										 "\ncommit:" + commit);
+							"\nwan ip:" + wanIp +
+							"\nlan ip:" + lanIp +
+							"\nsystemKind:" + (systemKind == 0 ? "Windows" : "Linux") +
+							"\ncommit:" + commit);
 						send(aptSocket, "OK");
 						send(aptSocket, SEID);
 						serverThreadArry.push_back(std::thread(serverThread, SEID));
