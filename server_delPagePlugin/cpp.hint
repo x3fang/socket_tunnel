@@ -1,2 +1,0 @@
-#define SERVERDELPAGEPLUGIN_API __declspec(dllexport)
-#define SERVERDELPAGEPLUGIN_API __declspec(dllimport)

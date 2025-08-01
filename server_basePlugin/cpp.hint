@@ -1,2 +1,0 @@
-#define SERVERBASEPLUGIN_API __declspec(dllexport)
-#define SERVERBASEPLUGIN_API __declspec(dllimport)

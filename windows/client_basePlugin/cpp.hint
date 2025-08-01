@@ -1,0 +1,2 @@
+#define DLLEXPORT __declspec(dllexport)
+#define CLIENTBASEPLUGIN_API __declspec(dllimport)

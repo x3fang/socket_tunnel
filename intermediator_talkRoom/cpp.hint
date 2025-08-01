@@ -1,2 +1,0 @@
-#define INTERMEDIATORTALKROOM_API __declspec(dllexport)
-#define INTERMEDIATORTALKROOM_API __declspec(dllimport)
