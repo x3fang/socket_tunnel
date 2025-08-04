@@ -3,8 +3,8 @@
 #include "pch.h"
 #include "framework.h"
 #include "server_delPagePlugin.h"
-#include "../include/globalDefine.h"
-#include "../include/serverStruct.h"
+#include "../../include/globalDefine.h"
+#include "../../include/serverStruct.h"
 class delPage_plugin : public PluginNamespace::pluginBase
 {
 public:

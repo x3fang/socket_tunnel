@@ -1,8 +1,8 @@
 // intermediator_talkRoom.cpp : 定义 DLL 的导出函数。
 //
-#include "../include/globalDefine.h"
-#include "../include/intermediatorStruct.h"
-#include "../include/fliter.h"
+#include "../../include/globalDefine.h"
+#include "../../include/intermediatorStruct.h"
+#include "../../include/fliter.h"
 #include <iostream>
 #include <sstream>
 struct talkRoomInfoStruct

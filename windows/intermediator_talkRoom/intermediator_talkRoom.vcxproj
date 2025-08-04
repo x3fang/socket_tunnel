@@ -162,19 +162,21 @@
     <None Include="cpp.hint" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\include\globalDefine.h" />
-    <ClInclude Include="..\include\intermediatorStruct.h" />
-    <ClInclude Include="..\include\log.h" />
-    <ClInclude Include="..\include\Plugin.h" />
-    <ClInclude Include="..\include\programPluginInfo.h" />
-    <ClInclude Include="..\include\sign.h" />
+    <ClInclude Include="..\..\include\fliter.h" />
+    <ClInclude Include="..\..\include\globalDefine.h" />
+    <ClInclude Include="..\..\include\intermediatorStruct.h" />
+    <ClInclude Include="..\..\include\log.h" />
+    <ClInclude Include="..\..\include\MD5.h" />
+    <ClInclude Include="..\..\include\Plugin.h" />
+    <ClInclude Include="..\..\include\programPluginInfo.h" />
+    <ClInclude Include="..\..\include\sign.h" />
     <ClInclude Include="framework.h" />
     <ClInclude Include="intermediator_talkRoom.h" />
     <ClInclude Include="pch.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\intermediator_talkRoom\intermediator_talkRoom.cpp" />
     <ClCompile Include="dllmain.cpp" />
-    <ClCompile Include="intermediator_talkRoom.cpp" />
     <ClCompile Include="pch.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>

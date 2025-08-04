@@ -1,6 +1,6 @@
 #define initClientSocket_
-#include "../include/globalDefine.h"
-#include "../include/serverStruct.h"
+#include "../../include/globalDefine.h"
+#include "../../include/serverStruct.h"
 WSADATA g_wsaData;
 sockaddr_in g_sockaddr;
 std::thread healthyBeatThread;
@@ -112,10 +112,11 @@ std::string checkServerMode()
 int main()
 {
 	(*g_log).setName("client");
+	(*g_log).writeln("program start");
+	(*g_log).writeln("load clients plugins");
 
-	*connectIp = "192.168.1.77";
-	connectPort = 6020;
-	PluginNamespace::loadPlugin((*pluginManager), std::string(".\\client_plugin\\"), "dll");
+	int res = PluginNamespace::loadPlugin((*pluginManager), std::string(".\\client_plugin\\"), "dll");
+	(*g_log).writeln("load " + std::to_string(res) + " plugins");
 
 	auto serverPluginName = checkServerMode();
 	if (serverPluginName != "")
@@ -137,12 +138,31 @@ int main()
 			return 0;
 		}
 	}
+
+	std::ifstream in("client.config");
+	std::string connectIPInputBuff = "127.0.0.1";
+	std::string connectPortInputBuff = "80";
+	bool loadInServerConfigFlag = false;
+
+	if (in)
+	{
+		getline(in, connectIPInputBuff);
+		getline(in, connectPortInputBuff);
+		(*connectIp) = connectIPInputBuff;
+		connectPort = std::stoi(connectPortInputBuff);
+	}
+	else {
+		(*connectIp) = "127.0.0.1";
+		connectPort = 80;
+	}
+	(*g_log).writeln("init client socket");
 	initClientSocket(g_wsaData, *mainConnectSocket, g_sockaddr, *connectIp, connectPort);
-	(*g_log).writeln("program start");
 
 	std::string helloMsg = "C" + getLanIp() + "W" + "This is a Test!";
 	while (connect(*mainConnectSocket, (sockaddr*)&g_sockaddr, sizeof(g_sockaddr)))
 		;
+	(*g_log).writeln("connect server socket");
+
 	send(*mainConnectSocket, helloMsg);
 	recv(*mainConnectSocket, helloMsg);
 	if (helloMsg == "OK")
@@ -156,6 +176,8 @@ int main()
 		if (helloMsg == "OK")
 		{
 			healthyBeatThread = std::thread(healthyBeat, std::ref(*healthySocket));
+			(*g_log).writeln("finished handshake");
+
 			std::string buf;
 			while (!stopSign)
 			{

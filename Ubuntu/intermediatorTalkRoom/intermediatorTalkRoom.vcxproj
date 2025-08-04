@@ -94,23 +94,24 @@
     <RemoteDeployDir>$(RemoteRootDir)/$(Configuration)/A_exe/plugin</RemoteDeployDir>
   </PropertyGroup>
   <ItemGroup>
-    <ClCompile Include="interemediator_talkroom.cpp" />
+    <ClInclude Include="..\..\include\fliter.h" />
+    <ClInclude Include="..\..\include\globalDefine.h" />
+    <ClInclude Include="..\..\include\intermediatorStruct.h" />
+    <ClInclude Include="..\..\include\log.h" />
+    <ClInclude Include="..\..\include\MD5.h" />
+    <ClInclude Include="..\..\include\Plugin.h" />
+    <ClInclude Include="..\..\include\programPluginInfo.h" />
+    <ClInclude Include="..\..\include\sign.h" />
+    <ClInclude Include="..\..\intermediator_talkRoom\pch.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\include\fliter.h" />
-    <ClInclude Include="..\include\globalDefine.h" />
-    <ClInclude Include="..\include\intermediatorStruct.h" />
-    <ClInclude Include="..\include\log.h" />
-    <ClInclude Include="..\include\MD5.h" />
-    <ClInclude Include="..\include\Plugin.h" />
-    <ClInclude Include="..\include\programPluginInfo.h" />
-    <ClInclude Include="..\include\sign.h" />
+    <ClCompile Include="..\..\intermediator_talkRoom\intermediator_talkRoom.cpp" />
   </ItemGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <PositionIndependentCode>true</PositionIndependentCode>
       <CppLanguageStandard>c++20</CppLanguageStandard>
-      <Optimization>Full</Optimization>
+      <Optimization>Disabled</Optimization>
       <LinkTimeOptimization>true</LinkTimeOptimization>
     </ClCompile>
   </ItemDefinitionGroup>

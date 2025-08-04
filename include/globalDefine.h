@@ -7,24 +7,19 @@
 #include <windows.h>
 #include <winsock2.h>
 #include <ws2tcpip.h>
-#define windowsSystem true
 #pragma comment(lib, "ws2_32.lib")
 #define EXPORT __declspec(dllexport)
-
+#define windowsSystem true
+#define pluginExtsion "dll"
 #else
-
 #include <arpa/inet.h>
 #include <errno.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
-#define SOCKET int
-#define INVALID_SOCKET -1
-#define SOCKET_ERROR -1
-#define closesocket close
-#define WSAGetLastError() errno
 #define EXPORT __attribute__((visibility("default")))
-
+#define SOCKET int
+#define pluginExtsion "so"
 #endif
 
 //#define /*DEBUG*/ // if define it,healthy Beat won't work
@@ -66,12 +61,14 @@ public:
 	{
 		if (del)
 			return WILL_DEL_STATUS;
-		lock = std::unique_lock<std::mutex>(valueLock);
+		std::unique_lock<std::mutex> tempLock(valueLock);
 		bool& inUse = use;
-		valueChange.wait(lock, [&inUse]
+		valueChange.wait(tempLock, [&inUse]
 			{ return !inUse; });
 
 		use = true;
+		// 将锁的所有权转移到成员变量 lock
+		lock = std::move(tempLock);
 		return SUCCESS_STATUS;
 	}
 	void unLock()
@@ -79,7 +76,12 @@ public:
 		if (!lock.owns_lock())
 			return;
 		use = false;
-		lock.unlock();
+		try {
+			lock.unlock();
+		}
+		catch (const std::system_error& e) {
+			throw(e.what());
+		}
 		valueChange.notify_one();
 	}
 };
@@ -87,8 +89,13 @@ int send(SOCKET& sock, const std::string& data)
 {
 	std::string temp(std::to_string(data.length()) + "\r" + data);
 	int res = send(sock, temp.c_str(), static_cast<int>(temp.size()), 0);
+#if windowsSystem
 	if (res == SOCKET_ERROR)
 		return WSAGetLastError();
+#else
+	if (res <= 0)
+		return errno;
+#endif
 	return SUCCESS_STATUS;
 }
 int recv(SOCKET& sock, std::string& data)
@@ -102,8 +109,13 @@ int recv(SOCKET& sock, std::string& data)
 		while (true)
 		{
 			int res = recv(sock, buf, 1, 0);
+#if windowsSystem
 			if (res == SOCKET_ERROR)
 				return WSAGetLastError();
+#else
+			if (res <= 0)
+				return errno;
+#endif
 			if (strlen(buf) > 0 && buf[0] == '\r')
 			{
 				if (recvDataLength != 0)
@@ -129,7 +141,11 @@ int recv(SOCKET& sock, std::string& data)
 	catch (const std::exception& e)
 	{
 		std::cout << e.what() << '\n';
+#if windowsSystem
 		return WSAGetLastError();
+#else
+		return errno;
+#endif
 	}
 	return -1;
 }

@@ -6,6 +6,7 @@
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__)
 #include <direct.h>
 #include <io.h>
+#define windowsSystem true
 #endif
 #if __linux__
 #include <sys/stat.h>

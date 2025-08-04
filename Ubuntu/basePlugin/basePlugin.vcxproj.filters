@@ -1,37 +1,40 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="Current" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <ClCompile Include="intermediator_basePlugin.cpp" />
-  </ItemGroup>
-  <ItemGroup>
     <Filter Include="头文件">
       <UniqueIdentifier>{56a73f27-1e26-4825-ba53-85a4609200a4}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\include\fliter.h">
+    <ClInclude Include="..\..\include\fliter.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\globalDefine.h">
+    <ClInclude Include="..\..\include\globalDefine.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\intermediatorStruct.h">
+    <ClInclude Include="..\..\include\intermediatorStruct.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\log.h">
+    <ClInclude Include="..\..\include\log.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\MD5.h">
+    <ClInclude Include="..\..\include\MD5.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\Plugin.h">
+    <ClInclude Include="..\..\include\Plugin.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\programPluginInfo.h">
+    <ClInclude Include="..\..\include\programPluginInfo.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\sign.h">
+    <ClInclude Include="..\..\include\sign.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\intermediator_basePlugin\pch.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\intermediator_basePlugin\intermediator_basePlugin.cpp" />
   </ItemGroup>
 </Project>

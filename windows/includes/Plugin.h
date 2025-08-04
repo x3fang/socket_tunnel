@@ -8,9 +8,14 @@
 #include <locale>
 #include <queue>
 #include <sstream>
+#if defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__)
+#define windowsSystem true
+#include <windows.h>
+#endif
+#if !windowsSystem
 #include <dirent.h>
 #include <dlfcn.h>
-#include <filesystem>
+#endif
 
 namespace PluginNamespace
 {
@@ -206,23 +211,13 @@ namespace PluginNamespace
 		this->pluginName = "PluginManager";
 	}
 
-	std::string relativeToAbsolute(const std::string& relativePath) {
-		// 创建文件系统路径对象
-		std::filesystem::path path(relativePath);
-
-		// 转换为绝对路径（自动处理'.'和'..'）
-		std::filesystem::path absolutePath = std::filesystem::absolute(path);
-
-		// 规范化路径（移除冗余符号）
-		absolutePath = absolutePath.lexically_normal();
-
-		return absolutePath.string();
-	}
-
-
 	typedef bool (*registerFun)(PluginManager&);
 	typedef bool (*unregisterFun)(PluginManager&);
+#if windowsSystem
+	static std::vector<HINSTANCE> pluginDllHandle;
+#else
 	static std::vector<void*> pluginDllHandle;
+#endif
 	int loadPlugin(PluginManager& manager, const std::string& pluginPath, const std::string& pluginExtension)
 	{
 		int res = 0;
@@ -234,16 +229,21 @@ namespace PluginNamespace
 		auto pluginPathVector = traverseFiles(pluginPath, pluginExtensionVector, blockWords);
 		for (auto it = pluginPathVector.begin(); it != pluginPathVector.end(); it++)
 		{
-			auto absolutePath = relativeToAbsolute(*it);
-			auto handle = dlopen(absolutePath.c_str(), RTLD_LAZY);
-
-			if (!handle)
+#if windowsSystem
+			pluginDllHandle.push_back((HINSTANCE)LoadLibraryA(it->c_str()));
+#else
+			pluginDllHandle.push_back(dlopen(it->c_str(), RTLD_LAZY));
+#endif
+			if (!pluginDllHandle.back())
 			{
-				auto errorCode = dlerror();;
+				pluginDllHandle.pop_back();
 				continue;
 			}
-			pluginDllHandle.push_back(handle);
+#if windowsSystem
+			auto regFun = ((registerFun)GetProcAddress(pluginDllHandle.back(), "registerFun"));
+#else
 			auto regFun = ((registerFun)dlsym(pluginDllHandle.back(), "registerFun"));
+#endif
 
 			if (regFun)
 			{
@@ -257,14 +257,131 @@ namespace PluginNamespace
 	{
 		for (auto& it : pluginDllHandle)
 		{
+#if windowsSystem
+			auto regFun = ((unregisterFun)GetProcAddress(pluginDllHandle.back(), "unregisterFun"));
+#else
 			auto regFun = ((unregisterFun)dlsym(pluginDllHandle.back(), "unregisterFun"));
+#endif
 			if (regFun)
 			{
 				regFun(manager);
+#if windowsSystem
+				CloseHandle(it);
+#else
 				dlclose(it);
+#endif
 			}
 		}
 	}
+#if windowsSystem
+	std::vector<std::wstring> stringVector_TO_wstringVector(const std::vector<std::string>& strVec)
+	{
+		std::vector<std::wstring> wstrVec;
+		for (const auto& s : strVec)
+		{
+			wstrVec.push_back(std::wstring(s.begin(), s.end()));
+		}
+		return wstrVec;
+	}
+	std::string UTF16ToUTF8(const std::wstring& utf16)
+	{
+		if (utf16.empty())
+			return "";
+
+		int size = WideCharToMultiByte(
+			CP_UTF8, 0,
+			utf16.c_str(), -1,
+			nullptr, 0,
+			nullptr, nullptr);
+
+		std::string utf8(size, 0);
+		WideCharToMultiByte(
+			CP_UTF8, 0,
+			utf16.c_str(), -1,
+			&utf8[0], size,
+			nullptr, nullptr);
+
+		return utf8;
+	}
+	std::vector<std::string> traverseFiles(const std::string& rootDir, const std::vector<std::string>& compareSuffix, const std::vector<std::string>& blockWords, std::vector<std::string>* fileNameVector)
+	{
+		std::vector<std::string> filePaths;
+		std::queue<std::wstring> dirQueue;
+		dirQueue.push(std::wstring(rootDir.begin(), rootDir.end()));
+
+		WIN32_FIND_DATAW findData;
+		HANDLE hFind;
+
+		while (!dirQueue.empty())
+		{
+			std::wstring currentDir = std::move(dirQueue.front());
+			dirQueue.pop();
+
+			// 手动构造搜索路径 currentDir\\*
+			std::wstring searchPath = currentDir;
+			if (currentDir.back() != L'\\')
+				searchPath += L'\\';
+			searchPath += L'*';
+
+			hFind = FindFirstFileW(searchPath.c_str(), &findData);
+			if (hFind == INVALID_HANDLE_VALUE)
+				continue;
+
+			do
+			{
+				// 跳过 "." 和 ".."
+				if (findData.cFileName[0] == L'.' &&
+					(findData.cFileName[1] == L'\0' ||
+						(findData.cFileName[1] == L'.' && findData.cFileName[2] == L'\0')))
+				{
+					continue;
+				}
+
+				// 手动拼接完整路径
+				std::wstring fullPath = currentDir;
+				if (fullPath.back() != L'\\')
+					fullPath += L'\\';
+				fullPath += findData.cFileName;
+
+				std::string fileExt = UTF16ToUTF8(std::wstring(findData.cFileName));
+				fileExt = fileExt.substr(fileExt.find_last_of(".") + 1);
+				fileExt.pop_back();//pop '\0'
+
+				if (findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
+				{
+					dirQueue.push(fullPath);
+				}
+				else if (fullPath.find_last_of(L".") != std::wstring::npos &&
+					std::find_if(blockWords.begin(), blockWords.end(),
+						[&](const std::string& word)
+						{ return UTF16ToUTF8(fullPath).find(word) != std::string::npos; })
+					== blockWords.end() &&
+					std::find(compareSuffix.begin(),
+						compareSuffix.end(), fileExt) != compareSuffix.end())
+				{
+					// 转换为UTF-8并存入vector
+					try
+					{
+						filePaths.emplace_back(UTF16ToUTF8(fullPath));
+						if (fileNameVector)
+						{
+							std::wstring fileName = std::wstring(findData.cFileName);
+							fileNameVector->push_back(UTF16ToUTF8(fileName));
+						}
+					}
+					catch (...)
+					{
+						// 忽略编码转换失败的文件
+					}
+				}
+			} while (FindNextFileW(hFind, &findData));
+
+			FindClose(hFind);
+		}
+
+		return filePaths;
+	}
+#else
 	std::vector<std::string> traverseFiles(const std::string& rootDir,
 		const std::vector<std::string>& compareSuffix,
 		const std::vector<std::string>& blockWords,
@@ -369,5 +486,6 @@ namespace PluginNamespace
 
 		return filePaths;
 	}
+#endif
 }
 #endif

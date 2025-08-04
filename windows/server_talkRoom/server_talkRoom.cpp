@@ -3,10 +3,10 @@
 #include "pch.h"
 #include "framework.h"
 #include "server_talkRoom.h"
-#include "../include/globalDefine.h"
-#include "../include/serverStruct.h"
-#include "../include/ConsoleChatUI.h"
-#include "../include/fliter.h"
+#include "../../include/globalDefine.h"
+#include "../../include/serverStruct.h"
+#include "../../include/ConsoleChatUI.h"
+#include "../../include/fliter.h"
 #include <iostream>
 #include <sstream>
 #include <iomanip>
@@ -17,13 +17,13 @@ private:
 	std::string roomName;
 
 public:
-	bool runFun(PluginNamespace::Info &info) override
+	bool runFun(PluginNamespace::Info& info) override
 	{
 		if (info.customize_data.empty())
 			return false;
 
-		std::shared_ptr<programPluginInfoStruct> &funInfo = (std::shared_ptr<programPluginInfoStruct> &)(info.customize_data[0]);
-		std::shared_ptr<PluginInfoStruct> &pluginInfo = (std::shared_ptr<PluginInfoStruct> &)(info.customize_data[1]);
+		std::shared_ptr<programPluginInfoStruct>& funInfo = (std::shared_ptr<programPluginInfoStruct> &)(info.customize_data[0]);
+		std::shared_ptr<PluginInfoStruct>& pluginInfo = (std::shared_ptr<PluginInfoStruct> &)(info.customize_data[1]);
 		sock = funInfo->mainConnectSocket;
 		char choice;
 
@@ -134,7 +134,7 @@ void talkRoom::talk()
 		}
 		send(*sock, input.front());
 		input.erase(input.begin());
-		for (auto &it : input)
+		for (auto& it : input)
 		{
 			send(*sock, it);
 		}
@@ -149,7 +149,7 @@ void talkRoom::talk()
 static talkRoom Plugin_talkRoom;
 extern "C"
 {
-	EXPORT bool registerFun(PluginNamespace::PluginManager &pluginManager)
+	EXPORT bool registerFun(PluginNamespace::PluginManager& pluginManager)
 	{
 		return pluginManager.registerFun(&Plugin_talkRoom).first;
 	}

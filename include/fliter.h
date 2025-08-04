@@ -1,10 +1,10 @@
 #ifndef FLITER_H
 #define FLITER_H
-#include <map>
-#include <cstring>
 #include <bitset>
-#include <variant>
+#include <cstring>
+#include <map>
 #include <memory>
+#include <variant>
 /*< 000001
 <= 000010
 > 000100
@@ -37,8 +37,9 @@ private:
 	struct ruleValue
 	{
 		bool useRule = true;
+		int ruleUsedOpt;
 		VariantIntOrString value;
-		int ruleUsedOpt = 0;
+
 		ruleValue() { ruleUsedOpt = 0; }
 		ruleValue(const int ruleUsedOpt_) : ruleUsedOpt(ruleUsedOpt_) {}
 		ruleValue(const int ruleUsedOpt_, VariantIntOrString value_) : ruleUsedOpt(ruleUsedOpt_), value(std::move(value_)) {}
@@ -53,10 +54,10 @@ private:
 	struct ruleNode
 	{
 		std::string id;
+		std::shared_ptr<ruleNode> next;
 		std::bitset<optNum> UsedOpt;
 		ruleValue rule;
 		ruleNode(const std::bitset<optNum> UsedOpt_) : next(nullptr), UsedOpt(UsedOpt_) {}
-		std::shared_ptr<ruleNode> next;
 	};
 	struct ruleTypeNode
 	{

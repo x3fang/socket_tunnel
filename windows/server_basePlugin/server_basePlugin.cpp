@@ -4,9 +4,9 @@
 #include "pch.h"
 #include "framework.h"
 #include "server_basePlugin.h"
-#include "../include/globalDefine.h"
-#include "../include/serverStruct.h"
-#include "../include/fliter.h"
+#include "../../include/globalDefine.h"
+#include "../../include/serverStruct.h"
+#include "../../include/fliter.h"
 #include <iostream>
 #include <sstream>
 #include <iomanip>

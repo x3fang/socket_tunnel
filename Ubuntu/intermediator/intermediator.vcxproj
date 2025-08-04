@@ -87,16 +87,17 @@
     <MultiProcNumber>16</MultiProcNumber>
   </PropertyGroup>
   <ItemGroup>
-    <ClCompile Include="intermediator.cpp" />
+    <ClInclude Include="..\..\include\globalDefine.h" />
+    <ClInclude Include="..\..\include\intermediatorStruct.h" />
+    <ClInclude Include="..\..\include\log.h" />
+    <ClInclude Include="..\..\include\MD5.h" />
+    <ClInclude Include="..\..\include\Plugin.h" />
+    <ClInclude Include="..\..\include\programPluginInfo.h" />
+    <ClInclude Include="..\..\include\sign.h" />
+    <ClInclude Include="..\..\include\Ubuntu.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\include\globalDefine.h" />
-    <ClInclude Include="..\include\intermediatorStruct.h" />
-    <ClInclude Include="..\include\log.h" />
-    <ClInclude Include="..\include\MD5.h" />
-    <ClInclude Include="..\include\Plugin.h" />
-    <ClInclude Include="..\include\programPluginInfo.h" />
-    <ClInclude Include="..\include\sign.h" />
+    <ClCompile Include="..\..\intermediatorEXE\intermediator.cpp" />
   </ItemGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>

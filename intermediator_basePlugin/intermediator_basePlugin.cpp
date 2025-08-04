@@ -1,8 +1,14 @@
-// intermediator_basePlugin.cpp : ¶¨Òå DLL µÄµ¼³öº¯Êý¡£
+ï»¿// intermediator_basePlugin.cpp : å®šä¹‰ DLL çš„å¯¼å‡ºå‡½æ•°ã€‚
 //
-#include "../../include/globalDefine.h"
-#include "../../include/intermediatorStruct.h"
-#include "../../include/fliter.h"
+#include "pch.h"
+#if defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__)
+#include "framework.h"
+#include "intermediator_basePlugin.h"
+
+#endif
+#include "../include/globalDefine.h"
+#include "../include/intermediatorStruct.h"
+#include "../include/fliter.h"
 #include <iostream>
 #include <sstream>
 class find : public PluginNamespace::pluginBase

@@ -1,5 +1,15 @@
 #pragma once
 
+// windows
+#if defined(WIN32) || defined(_WIN32) || defined(__WIN32)
+#include <WinSock2.h>
+#include <conio.h>
+#include <windows.h>
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#pragma comment(lib, "ws2_32.lib")
+#define EXPORT __declspec(dllexport)
+#else
 #include <arpa/inet.h>
 #include <errno.h>
 #include <sys/socket.h>
@@ -7,6 +17,7 @@
 #include <arpa/inet.h>
 #define EXPORT __attribute__((visibility("default")))
 #define SOCKET int
+#endif
 
 //#define /*DEBUG*/ // if define it,healthy Beat won't work
 #include <algorithm>
@@ -68,8 +79,8 @@ int send(SOCKET& sock, const std::string& data)
 {
 	std::string temp(std::to_string(data.length()) + "\r" + data);
 	int res = send(sock, temp.c_str(), static_cast<int>(temp.size()), 0);
-	if (res <= 0)
-		return errno;
+	if (res == SOCKET_ERROR)
+		return WSAGetLastError();
 	return SUCCESS_STATUS;
 }
 int recv(SOCKET& sock, std::string& data)
@@ -83,8 +94,8 @@ int recv(SOCKET& sock, std::string& data)
 		while (true)
 		{
 			int res = recv(sock, buf, 1, 0);
-			if (res <= 0)
-				return errno;
+			if (res == SOCKET_ERROR)
+				return WSAGetLastError();
 			if (strlen(buf) > 0 && buf[0] == '\r')
 			{
 				if (recvDataLength != 0)
@@ -109,10 +120,36 @@ int recv(SOCKET& sock, std::string& data)
 	}
 	catch (const std::exception& e)
 	{
-		throw e.what();
+		std::cout << e.what() << '\n';
+		return WSAGetLastError();
 	}
 	return -1;
 }
+#ifdef initClientSocket_
+int initClientSocket(WSADATA& wsaData, SOCKET& sock, sockaddr_in& serverInfo, std::string& serverIP, int serverPort)
+{
+	int iResult = WSAStartup(MAKEWORD(2, 2), &wsaData);
+	if (iResult != 0)
+	{
+		int errorCode = WSAGetLastError();
+		WSACleanup();
+		return errorCode;
+	}
+	// Create socket
+	sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+	if (sock == INVALID_SOCKET)
+	{
+		int errorCode = WSAGetLastError();
+		WSACleanup();
+		return errorCode;
+	}
+	// Set address and port
+	serverInfo.sin_family = AF_INET;
+	inet_pton(AF_INET, serverIP.c_str(), &(serverInfo.sin_addr));
+	serverInfo.sin_port = htons(serverPort);
+	return SUCCESS_STATUS;
+}
+#endif
 #include "Plugin.h"
 #include "programPluginInfo.h"
 std::shared_ptr<PluginNamespace::PluginManager> pluginManager(std::make_shared<PluginNamespace::PluginManager>());

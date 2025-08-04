@@ -3,11 +3,11 @@
 #include "pch.h"
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__)
 #include "framework.h"
-#include "intermediator_basePlugin.h"
+#include "intermediator_basePlugin2.h"
 #endif
-#include "../include/globalDefine.h"
-#include "../include/intermediatorStruct.h"
-#include "../include/fliter.h"
+#include "../../include/globalDefine.h"
+#include "../../include/intermediatorStruct.h"
+#include "../../include/fliter.h"
 #include <iostream>
 #include <sstream>
 class find : public PluginNamespace::pluginBase

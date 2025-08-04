@@ -1,46 +1,22 @@
-﻿#include "../include/globalDefine.h"
-#include "../include/log.h"
-#include "../include/MD5.h"
-#include "../include/intermediatorStruct.h"
+﻿#if defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__)
+#include "../include/WindowsFunc.h"
+#else
+#include "../include/Ubuntu.h"
+#endif
+#include "../../include/log.h"
+#include "../../include/MD5.h"
+#include "../../include/intermediatorStruct.h"
 #include <random>
 bool ServerStopFlag = false;
 sockaddr_in g_sockaddr;
 std::thread healthyBeatThread;
+
 std::shared_ptr<std::map<std::string, std::shared_ptr<IndividualInfoStruct>>> ServerInfo(std::make_shared<std::map<std::string, std::shared_ptr<IndividualInfoStruct>>>());
+
 std::shared_ptr<std::map<std::string, std::shared_ptr<IndividualInfoStruct>>> ClientInfo(std::make_shared<std::map<std::string, std::shared_ptr<IndividualInfoStruct>>>());
+
 std::vector<healthyBeatInfoStruct> healthyBeatSOCKETList;
 std::vector<std::thread> serverThreadArry;
-int initServer(SOCKET& ListenSocket, sockaddr_in& sockAddr, int port)
-{
-	int iResult = 0;
-	ListenSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-	if (ListenSocket <= 0)
-	{
-		int errorCode = 0;
-		return errorCode;
-	}
-
-	sockAddr.sin_family = AF_INET;
-	sockAddr.sin_addr.s_addr = INADDR_ANY;
-	sockAddr.sin_port = htons(port);
-	iResult = bind(ListenSocket, (sockaddr*)&sockAddr, sizeof(sockAddr));
-	if (iResult < 0)
-	{
-		int errorCode = 0;
-		errorCode = errno;
-		close(ListenSocket);
-		return errorCode;
-	}
-	iResult = listen(ListenSocket, SOMAXCONN);
-	if (iResult < 0)
-	{
-		int errorCode = 0;
-		errorCode = errno;
-		close(ListenSocket);
-		return errorCode;
-	}
-	return SUCCESS_STATUS;
-}
 const std::string createSEID(const std::string& temp)
 {
 	MD5::MD5 md5;
@@ -86,12 +62,12 @@ int del(const std::string& SEID, std::map<std::string, std::shared_ptr<Individua
 		if (*(*infoMap)[SEID]->healthSocket > 0)
 		{
 			send(*(*infoMap)[SEID]->healthSocket, "del");
-			close(*(*infoMap)[SEID]->healthSocket);
+			closesocket(*(*infoMap)[SEID]->healthSocket);
 			*(*infoMap)[SEID]->healthSocket = -1;
 			healthyBeatSOCKETList.erase(std::find(healthyBeatSOCKETList.begin(), healthyBeatSOCKETList.end(), SEID));
 		}
 		send(*(*infoMap)[SEID]->commSocket, "end");
-		close(*(*infoMap)[SEID]->commSocket);
+		closesocket(*(*infoMap)[SEID]->commSocket);
 		*(*infoMap)[SEID]->commSocket = -1;
 		(*(*infoMap)[SEID]).unLock();
 		(*infoMap).erase(SEID);
@@ -175,9 +151,9 @@ void healthyBeat()
 				int timeout = 3000;
 				setsockopt(healthyInfo.healthSocket, SOL_SOCKET, SO_RCVTIMEO, (char*)&timeout, sizeof(timeout));
 				setsockopt(healthyInfo.healthSocket, SOL_SOCKET, SO_SNDTIMEO, (char*)&timeout, sizeof(timeout));
-				send(healthyInfo.healthSocket, std::to_string(radom));
-				recv(healthyInfo.healthSocket, buf);
-				if (buf != std::to_string(radom))
+				int res1 = send(healthyInfo.healthSocket, std::to_string(radom));
+				int res2 = recv(healthyInfo.healthSocket, buf);
+				if (buf != std::to_string(radom) || res1 != SUCCESS_STATUS || res2 != SUCCESS_STATUS)
 				{
 					prlog->writeln(std::string("one ") + std::string((healthyInfo.server ? "server" : "client")) +
 						" disconnect\n" + "SEID:" +
@@ -273,27 +249,69 @@ void serverThread(const std::string SEID)
 }
 int main()
 {
-#ifdef DEBUG
 	(*g_log).setDetailLevel(logNameSpace::Log::detailLevelEnum::debug);
-#else
-	(*g_log).setDetailLevel(logNameSpace::Log::detailLevelEnum::release);
-#endif
-
-	(*connectIp) = "0.0.0.0";
-	connectPort = 6020;
 	(*g_log).setName("intermediator");
 	(*g_log).writeln("initializing program");
 
-	(*g_log).writeln("load plugin");
-	int res = PluginNamespace::loadPlugin((*pluginManager), "./plugin/", "so");
-	(*g_log).writeln("load" + std::to_string(res) + "plugin");
-
 	(*g_log).writeln("init server");
+	std::ifstream in("server.config");
+	std::string connectIPInputBuff = "0.0.0.0";
+	std::string connectPortInputBuff = "80";
+	std::string pluginPathInputBuff = "./plugin/";
+	bool loadInServerConfigFlag = false;
+	int res = 0;
+	if (in)
+	{
+		getline(in, connectIPInputBuff);
+		getline(in, connectPortInputBuff);
+		getline(in, pluginPathInputBuff);
+
+		(*connectIp) = connectIPInputBuff;
+		connectPort = std::stoi(connectPortInputBuff);
 #if windowsSystem
-	res = initServer(*mainConnectSocket, g_wsaData, g_sockaddr, connectPort);
+		res = initServer(*mainConnectSocket, g_wsaData, g_sockaddr, std::stoi(connectPortInputBuff), connectIPInputBuff);
 #else
-	res = initServer(*mainConnectSocket, g_sockaddr, connectPort);
+		res = initServer(*mainConnectSocket, g_sockaddr, std::stoi(connectPortInputBuff), connectIPInputBuff);
 #endif
+		if (res == SUCCESS_STATUS)
+			loadInServerConfigFlag = true;
+
+		if (pluginPathInputBuff != "")
+		{
+			(*g_log).writeln("load plugin");
+			res = PluginNamespace::loadPlugin((*pluginManager), pluginPathInputBuff, pluginExtsion);
+			(*g_log).writeln("load" + std::to_string(res) + "plugin");
+		}
+		else
+		{
+			(*g_log).writeln("load plugin");
+			res = PluginNamespace::loadPlugin((*pluginManager), "./plugin/", pluginExtsion);
+			(*g_log).writeln("load" + std::to_string(res) + "plugin");
+		}
+	}
+	if (!loadInServerConfigFlag)
+	{
+		do
+		{
+			std::cout << "input listen ip(input 0 chose 0.0.0.0,input -1 to exit):";
+			std::cin >> connectIPInputBuff;
+			if (connectIPInputBuff == "-1")
+				return 0;
+			std::cout << "input listen port:";
+			std::cin >> connectPortInputBuff;
+#if windowsSystem
+			int res = initServer(*mainConnectSocket, g_wsaData, g_sockaddr, std::stoi(connectPortInputBuff), connectIPInputBuff);
+#else
+			int res = initServer(*mainConnectSocket, g_sockaddr, std::stoi(connectPortInputBuff), connectIPInputBuff);
+#endif
+			if (res == SUCCESS_STATUS)
+			{
+				(*connectIp) = (connectIPInputBuff == "0" ? "0.0.0.0" : connectIPInputBuff);
+				connectPort = std::stoi(connectPortInputBuff);
+				break;
+			}
+		} while (true);
+	}
 
 	if (res != SUCCESS_STATUS)
 	{
@@ -328,7 +346,7 @@ int main()
 			if (buf.length() <= 1)
 			{
 				(*g_log).writeln("invalid connect");
-				close(aptSocket);
+				closesocket(aptSocket);
 				continue;
 			}
 #if windowsSystem
@@ -407,7 +425,7 @@ int main()
 			failRegister:
 				(*g_log).writeln("Register fail");
 				send(aptSocket, "FAIL");
-				close(aptSocket);
+				closesocket(aptSocket);
 			}
 		}
 	}

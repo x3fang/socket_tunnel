@@ -3,9 +3,9 @@
 #else
 #include "../include/Ubuntu.h"
 #endif
-#include "../../include/log.h"
-#include "../../include/MD5.h"
-#include "../../include/intermediatorStruct.h"
+#include "../include/log.h"
+#include "../include/MD5.h"
+#include "../include/intermediatorStruct.h"
 #include <random>
 bool ServerStopFlag = false;
 sockaddr_in g_sockaddr;

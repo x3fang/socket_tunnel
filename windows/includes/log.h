@@ -302,11 +302,7 @@ namespace logNameSpace
 	{
 		time_t now = time(NULL);
 		tm tm_t;
-#if windowsSystem
 		localtime_s(&tm_t, &now);
-#else
-		localtime_r(&now, &tm_t);
-#endif
 		return (std::to_string(tm_t.tm_year + 1900) +
 			"/" + std::to_string(tm_t.tm_mon + 1) +
 			"/" + std::to_string(tm_t.tm_mday) +
@@ -343,14 +339,14 @@ namespace logNameSpace
 					}
 				}
 				sub.clear();
+				}
 			}
-		}
 		return true;
-	}
+		}
 	std::string operator+(std::string msg, ENDL p)
 	{
 		return msg + "\n";
 	}
-};
+	};
 
 #endif

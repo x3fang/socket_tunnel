@@ -5,9 +5,9 @@
 #include "framework.h"
 #include "intermediator_talkRoom.h"
 #endif
-#include "../../include/globalDefine.h"
-#include "../../include/intermediatorStruct.h"
-#include "../../include/fliter.h"
+#include "../include/globalDefine.h"
+#include "../include/intermediatorStruct.h"
+#include "../include/fliter.h"
 #include <iostream>
 #include <sstream>
 struct talkRoomInfoStruct
